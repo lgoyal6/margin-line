@@ -23,7 +23,16 @@ jobs:
       fail-fast: false
       matrix:
         range:
-          - { from: 54972991, to: 95000000 }
+          # Early history is sparse but spans 40M blocks, which exceeded one job's time limit, so it
+          # is split into 5M-block ranges.
+          - { from: 54972991, to: 60000000 }
+          - { from: 60000000, to: 65000000 }
+          - { from: 65000000, to: 70000000 }
+          - { from: 70000000, to: 75000000 }
+          - { from: 75000000, to: 80000000 }
+          - { from: 80000000, to: 85000000 }
+          - { from: 85000000, to: 90000000 }
+          - { from: 90000000, to: 95000000 }
           - { from: 95000000, to: 99000000 }
           - { from: 99000000, to: 103000000 }
           - { from: 103000000, to: 107000000 }
