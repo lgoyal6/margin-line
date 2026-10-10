@@ -1,0 +1,63 @@
+name: Perpl history backfill
+
+# Downloads Perpl Exchange events from Envio HyperSync in fixed block ranges and publishes each range
+# as a release asset (release tag `data-perpl-raw`). Ranges run one at a time because the HyperSync
+# rate limit is per token. A range whose asset already exists is skipped, so reruns only fill gaps.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: perpl-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        range:
+          - { from: 54972991, to: 95000000 }
+          - { from: 95000000, to: 99000000 }
+          - { from: 99000000, to: 103000000 }
+          - { from: 103000000, to: 107000000 }
+          - { from: 107000000, to: 111000000 }
+          - { from: 111000000, to: 112140000 }
+    env:
+      ASSET: perpl-raw-${{ matrix.range.from }}-${{ matrix.range.to }}.tar
+      RELEASE: data-perpl-raw
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Skip if this range is already published
+        id: existing
+        run: |
+          if gh release view "$RELEASE" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "$ASSET"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download events
+        if: steps.existing.outputs.skip != 'true'
+        env:
+          ENVIO_API_TOKEN: ${{ secrets.ENVIO_API_TOKEN }}
+        run: python3 data/perpl_backfill.py --from-block ${{ matrix.range.from }} --to-block ${{ matrix.range.to }}
+
+      - name: Publish range
+        if: steps.existing.outputs.skip != 'true'
+        run: |
+          tar -cf "$ASSET" -C data/raw perpl
+          gh release view "$RELEASE" >/dev/null 2>&1 || \
+            gh release create "$RELEASE" --title "Perpl raw event history" \
+              --notes "Perpl Exchange events from Envio HyperSync, one gzip JSONL chunk per query, grouped by block range. Produced by .github/workflows/perpl-backfill.yml."
+          gh release upload "$RELEASE" "$ASSET"
