@@ -21,6 +21,18 @@ npm --prefix app run dev -- --port 5180
 
 Open http://localhost:5180 (a hostname, not 127.0.0.1: passkeys need one).
 
+## Run it against live Monad testnet
+
+```bash
+VITE_RPC_URL=https://testnet-rpc.monad.xyz npm --prefix app run dev -- --port 5181
+```
+
+The app then reads `app/public/deployments/monad-testnet.json` and `app/public/epochs/latest-testnet.json`
+(copy them from `deployments/` and the publisher's output). Fork-only buttons (test funds, demo
+approval) are hidden. Reads are bundled through Multicall3 and retried, because the public RPC
+throttles bursts. `LIVE=1 APP_URL=http://localhost:5181 node --experimental-strip-types e2e/src/newcomer.ts`
+runs the exit test on testnet; it passed, with evidence in `e2e/evidence/newcomer-testnet/`.
+
 ## Tests
 
 ```bash
