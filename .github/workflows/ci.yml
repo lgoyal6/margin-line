@@ -1,0 +1,48 @@
+name: Solidity and app checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build contracts
+        run: forge build
+      - name: Unit tests
+        run: forge test --no-match-path "test/{fork,invariant,phase0}/*"
+      - name: Invariant tests
+        run: forge test --match-path "test/invariant/*"
+      - name: Fork tests
+        if: ${{ env.MONAD_TESTNET_RPC != '' }}
+        env:
+          MONAD_TESTNET_RPC: ${{ secrets.MONAD_TESTNET_RPC }}
+        run: forge test --match-path "test/{fork,phase0}/*" --fork-url "$MONAD_TESTNET_RPC"
+      - name: Gas snapshot
+        run: forge snapshot --check --no-match-path "test/{fork,invariant,phase0}/*"
+      - name: Contract size budget
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for artifact in Path('out').glob('src/**/*.json'):
+              data = json.loads(artifact.read_text())
+              size = len(data.get('deployedBytecode', {}).get('object', '')) // 2
+              if not size:
+                  continue
+              limit = 131072 if artifact.stem == 'MarketFactory' else 24576
+              if size > limit:
+                  raise SystemExit(f'{artifact}: {size} bytes exceeds {limit}')
+          PY
+      - name: Build app
+        working-directory: app
+        run: npm ci && npm run build
