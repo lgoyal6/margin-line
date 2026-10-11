@@ -1,0 +1,15 @@
+{
+  "name": "margin-line-keeper",
+  "private": true,
+  "type": "module",
+  "description": "Permissionless keeper: freezes unhealthy Margin Line credit lines, unwinds their Perpl positions and settles them.",
+  "scripts": {
+    "start": "node --experimental-strip-types src/keeper.ts"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "dependencies": {
+    "viem": "2.56.9"
+  }
+}
