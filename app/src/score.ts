@@ -1,7 +1,7 @@
 // Score epochs published by scorer/epoch.py, and their onchain check against the ScoreOracle.
 import type { Address, Hex } from "viem";
 import { scoreOracleAbi } from "./abi";
-import { publicClient, type Deployment } from "./chain";
+import { isLocalFork, publicClient, type Deployment } from "./chain";
 
 export type ScoreFeatures = {
   activeDays: number; closes: number; pnlExtMicro: number; avgLevBps: number; liqHist: number;
@@ -13,7 +13,7 @@ export type ScoreEpoch = {
 };
 
 export async function loadEpoch(): Promise<ScoreEpoch | null> {
-  const r = await fetch("/epochs/latest.json");
+  const r = await fetch(isLocalFork() ? "/epochs/latest.json" : "/epochs/latest-testnet.json");
   return r.ok ? ((await r.json()) as ScoreEpoch) : null;
 }
 
