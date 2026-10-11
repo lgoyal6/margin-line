@@ -21,3 +21,4 @@ app/public/deployments/
 deployments/local-fork.json
 # Forge broadcast logs (local fork runs share chain id 10143 with testnet); the live record is deployments/monad-testnet.json
 broadcast/
+app/.vite/

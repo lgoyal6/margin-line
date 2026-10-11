@@ -39,8 +39,9 @@ export const isLocalFork = () => RPC_URL.includes("127.0.0.1") || RPC_URL.includ
 
 let deploymentPromise: Promise<Deployment> | undefined;
 export function loadDeployment(): Promise<Deployment> {
-  deploymentPromise ??= fetch("/deployments/local-fork.json").then((r) => {
-    if (!r.ok) throw new Error("No deployment record. Run app/scripts/local-chain.sh first.");
+  const name = isLocalFork() ? "local-fork" : "monad-testnet";
+  deploymentPromise ??= fetch(`/deployments/${name}.json`).then((r) => {
+    if (!r.ok) throw new Error(`No deployment record at /deployments/${name}.json.`);
     return r.json() as Promise<Deployment>;
   });
   return deploymentPromise;
@@ -51,12 +52,16 @@ export const chain = defineChain({
   name: isLocalFork() ? "Local fork of Monad testnet" : "Monad testnet",
   nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
   rpcUrls: { default: { http: [RPC_URL] } },
+  contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" } },
 });
 
-export const publicClient: PublicClient = createPublicClient({ chain, transport: http(RPC_URL) });
+// The public Monad RPC throttles bursts: reads issued together are bundled into one Multicall3 call,
+// and throttled requests are retried with backoff.
+const transport = () => http(RPC_URL, { retryCount: 6, retryDelay: 500 });
+export const publicClient: PublicClient = createPublicClient({ chain, transport: transport(), batch: { multicall: { wait: 16 } } });
 
 export function walletFor(privateKey: Hex) {
-  return createWalletClient({ account: privateKeyToAccount(privateKey), chain, transport: http(RPC_URL) });
+  return createWalletClient({ account: privateKeyToAccount(privateKey), chain, transport: transport() });
 }
 
 /** A wallet client that sends as `address` on the local fork, without its key (anvil impersonation). */

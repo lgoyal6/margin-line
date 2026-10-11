@@ -8,13 +8,16 @@
 //      node --experimental-strip-types e2e/src/newcomer.ts
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { chromium, type Page } from "playwright";
-import { createPublicClient, http, parseAbi, type Address } from "viem";
+import { createPublicClient, createWalletClient, http, parseAbi, type Address } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 const base = process.env.APP_URL ?? "http://localhost:5180"; // WebAuthn needs a hostname, not an IP
-const rpc = process.env.RPC_URL ?? "http://127.0.0.1:8547";
-const out = "e2e/evidence/newcomer";
+// LIVE=1 runs against Monad testnet: the app must be started with VITE_RPC_URL set to testnet.
+const live = process.env.LIVE === "1";
+const rpc = process.env.RPC_URL ?? (live ? "https://testnet-rpc.monad.xyz" : "http://127.0.0.1:8547");
+const out = live ? "e2e/evidence/newcomer-testnet" : "e2e/evidence/newcomer";
 mkdirSync(out, { recursive: true });
-const dep = JSON.parse(readFileSync("deployments/local-fork.json", "utf8"));
+const dep = JSON.parse(readFileSync(live ? "deployments/monad-testnet.json" : "deployments/local-fork.json", "utf8"));
 const pub = createPublicClient({ transport: http(rpc) });
 const log: Record<string, unknown>[] = [];
 let shot = 0;
@@ -34,6 +37,29 @@ async function act(page: Page, label: string, scope = page.locator("body")) {
   if (errors.length > errorsBefore) throw new Error(`"${label}" failed: ${errors.join(" | ")}`);
   log.push({ step: label, ms: Date.now() - t0 });
   console.log(`ok  ${label} (${Date.now() - t0} ms)`);
+}
+
+/** Live testnet setup steps that the fork-only buttons do locally, sent with the deployer key. */
+async function liveSetup(step: "fund" | "approve", user: Address) {
+  const key = JSON.parse(readFileSync(".agent-work/secrets/testnet-deployer.json", "utf8"));
+  const pk = (Array.isArray(key.data) ? key.data[0] : key.data).private_key as `0x${string}`;
+  const chain = { id: 10143, name: "Monad testnet", nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 }, rpcUrls: { default: { http: [rpc] } } } as const;
+  const w = createWalletClient({ account: privateKeyToAccount(pk), chain, transport: http(rpc) });
+  const wait = async (hash: `0x${string}`) => {
+    const r = await pub.waitForTransactionReceipt({ hash });
+    if (r.status !== "success") throw new Error(`live setup ${step} reverted`);
+  };
+  if (step === "fund") {
+    await wait(await w.sendTransaction({ to: user, value: 800_000_000_000_000_000n })); // 0.8 MON
+    await wait(await w.writeContract({ address: dep.ausd, abi: parseAbi(["function transfer(address,uint256) returns (bool)"]), functionName: "transfer", args: [user, 2_000_000_000n] }));
+    const start = await pub.getBlockNumber();
+    while ((await pub.getBlockNumber()) < start + 5n) await new Promise((r) => setTimeout(r, 400));
+  } else {
+    const now = (await pub.getBlock()).timestamp;
+    await wait(await w.writeContract({ address: dep.manager, abi: parseAbi(["function approve(address,uint128,uint16,uint40)"]), functionName: "approve", args: [user, 1_500_000_000n, 1_000, Number(now) + 86_400] }));
+  }
+  log.push({ step: `live setup: ${step} (deployer key, outside the UI)` });
+  console.log(`ok  live setup: ${step}`);
 }
 
 async function waitText(page: Page, text: string | RegExp) {
@@ -60,8 +86,17 @@ try {
   // 1. Account: passkey only, then test funds (fork only) and onchain registration.
   await act(page, "Create account with a passkey");
   await waitText(page, "Wallet");
-  await act(page, "Get test funds (local fork)");
-  await waitText(page, "$5,000.00");
+  if (live) {
+    // The fork-only "test funds" button does not exist on testnet: the deployer sends gas money and
+    // test AUSD, then we wait out Monad's lagged reserve-balance check before the wallet sends.
+    const newUser = (await page.evaluate(() => JSON.parse(sessionStorage.getItem("margin-line-session")!).address)) as Address;
+    await liveSetup("fund", newUser);
+    await page.reload();
+    await waitText(page, "$2,000.00");
+  } else {
+    await act(page, "Get test funds (local fork)");
+    await waitText(page, "$5,000.00");
+  }
   await act(page, "Register passkey onchain");
   await waitText(page, "Registered");
   await snap(page, "account");
@@ -74,8 +109,15 @@ try {
   await snap(page, "score");
 
   // 3. Credit: labeled demo approval (fork only), then open a line with the default 500 + 1,000.
-  await act(page, "Approve this wallet for $2,000 (demo)");
-  await waitText(page, "$2,000");
+  if (live) {
+    // On testnet the deployer is the underwriter and approves this wallet for $1,500 directly.
+    await liveSetup("approve", user);
+    await page.reload();
+    await waitText(page, "Approved limit");
+  } else {
+    await act(page, "Approve this wallet for $2,000 (demo)");
+    await waitText(page, "$2,000");
+  }
   await act(page, "Open credit line");
   await waitText(page, /Active line/);
   await snap(page, "line-open");

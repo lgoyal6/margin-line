@@ -1,63 +1,63 @@
 {
-  "user": "0xC89A59daddA2F0dA010f5DFA5B9c1A907B301164",
+  "user": "0x981B33b7C47727008edf5CF91c9E6739d56d061B",
   "line": "0x1972CE01172759631A2A649BABdb8e081a85CFFe",
   "steps": [
     {
       "step": "Create account with a passkey",
-      "ms": 1652
+      "ms": 1600
     },
     {
       "step": "Get test funds (local fork)",
-      "ms": 1642
+      "ms": 1643
     },
     {
       "step": "Register passkey onchain",
-      "ms": 1660
+      "ms": 1642
     },
     {
       "step": "Check",
-      "ms": 1537
+      "ms": 1544
     },
     {
       "step": "Approve this wallet for $2,000 (demo)",
-      "ms": 1657
+      "ms": 1663
     },
     {
       "step": "Open credit line",
-      "ms": 4377
+      "ms": 3428
     },
     {
       "step": "Grant session key with passkey",
-      "ms": 1761
+      "ms": 1787
     },
     {
       "step": "Revoke session key",
-      "ms": 1646
+      "ms": 1641
     },
     {
       "step": "Open long",
-      "ms": 2973
+      "ms": 2715
     },
     {
       "step": "Close position",
-      "ms": 2009
+      "ms": 1984
     },
     {
       "step": "Withdraw profit with passkey",
-      "ms": 2417
+      "ms": 2314
     },
     {
       "step": "Close line with passkey",
-      "ms": 1795
+      "ms": 1768
     },
     {
       "step": "Deposit",
-      "ms": 1868
+      "ms": 1840
     }
   ],
   "checks": {
     "swept": true,
-    "sweptAmount": "248673946",
+    "sweptAmount": "248733264",
     "lineClosed": true,
     "principalRepaid": true,
     "poolLosses": "0",

@@ -1,0 +1,65 @@
+{
+  "user": "0x861F9f7643DF03186b9be5a7286f19b9a20F6C38",
+  "line": "0x948cfeEf393ceC89091Dd52FD6F4f0d5410844f2",
+  "steps": [
+    {
+      "step": "Create account with a passkey",
+      "ms": 1613
+    },
+    {
+      "step": "live setup: fund (deployer key, outside the UI)"
+    },
+    {
+      "step": "Register passkey onchain",
+      "ms": 2199
+    },
+    {
+      "step": "Check",
+      "ms": 1669
+    },
+    {
+      "step": "live setup: approve (deployer key, outside the UI)"
+    },
+    {
+      "step": "Open credit line",
+      "ms": 2730
+    },
+    {
+      "step": "Grant session key with passkey",
+      "ms": 2501
+    },
+    {
+      "step": "Revoke session key",
+      "ms": 2528
+    },
+    {
+      "step": "Open long",
+      "ms": 2541
+    },
+    {
+      "step": "Close position",
+      "ms": 2548
+    },
+    {
+      "step": "Withdraw profit with passkey",
+      "ms": 2388
+    },
+    {
+      "step": "Close line with passkey",
+      "ms": 2896
+    },
+    {
+      "step": "Deposit",
+      "ms": 2734
+    }
+  ],
+  "checks": {
+    "swept": true,
+    "sweptAmount": "248733830",
+    "lineClosed": true,
+    "principalRepaid": true,
+    "poolLosses": "0",
+    "interestPaid": "56",
+    "lentToJunior": true
+  }
+}
