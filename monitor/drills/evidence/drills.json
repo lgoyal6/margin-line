@@ -1,0 +1,93 @@
+{
+  "baseline": [],
+  "1 line at risk": {
+    "fired": true,
+    "alert": {
+      "id": "line-at-risk:0x1972CE01172759631A2A649BABdb8e081a85CFFe",
+      "severity": "warn",
+      "message": "Line 0x1972CE01172759631A2A649BABdb8e081a85CFFe health 15000 bps is below the 16000 bps needed to add risk",
+      "value": "15000"
+    },
+    "all": [
+      "line-at-risk:0x1972CE01172759631A2A649BABdb8e081a85CFFe",
+      "reserve-thin"
+    ]
+  },
+  "2 missed freeze": {
+    "fired": true,
+    "alert": {
+      "id": "missed-freeze:0x1972CE01172759631A2A649BABdb8e081a85CFFe",
+      "severity": "critical",
+      "message": "Line 0x1972CE01172759631A2A649BABdb8e081a85CFFe has been freezable for 11 blocks and nobody froze it: is the keeper down?",
+      "value": "14999"
+    },
+    "all": [
+      "line-at-risk:0x1972CE01172759631A2A649BABdb8e081a85CFFe",
+      "missed-freeze:0x1972CE01172759631A2A649BABdb8e081a85CFFe",
+      "reserve-thin"
+    ]
+  },
+  "3 utilization": {
+    "fired": true,
+    "alert": {
+      "id": "utilization",
+      "severity": "warn",
+      "message": "Pool utilization 8800 bps is above 8500 bps",
+      "value": "8800"
+    },
+    "all": [
+      "utilization",
+      "reserve-thin"
+    ]
+  },
+  "4 reserve thin": {
+    "fired": true,
+    "alert": {
+      "id": "reserve-thin",
+      "severity": "warn",
+      "message": "Reserve 0 is under 1% of lender capital while 2000000000 is lent out",
+      "value": "0"
+    },
+    "all": [
+      "reserve-thin"
+    ]
+  },
+  "5 queue stuck": {
+    "fired": true,
+    "alert": {
+      "id": "queue-stuck:junior",
+      "severity": "warn",
+      "message": "Oldest junior withdrawal request has waited 72 hours",
+      "value": "259260"
+    },
+    "all": [
+      "queue-stuck:junior"
+    ]
+  },
+  "cliOutput": [
+    "{\"ts\":\"2026-10-11T01:07:04.091Z\",\"event\":\"alert\",\"id\":\"breaker\",\"severity\":\"critical\",\"message\":\"Circuit breaker: Paused. New risk is blocked.\"}"
+  ],
+  "6 breaker": {
+    "fired": true,
+    "alert": {
+      "id": "breaker",
+      "severity": "critical",
+      "message": "Circuit breaker: Paused. New risk is blocked."
+    },
+    "all": [
+      "breaker"
+    ]
+  },
+  "7 junior thin": {
+    "fired": true,
+    "alert": {
+      "id": "junior-thin",
+      "severity": "warn",
+      "message": "Junior is 2112 bps of the pool, close to the 2000 bps floor",
+      "value": "2112"
+    },
+    "all": [
+      "junior-thin"
+    ]
+  }
+}
