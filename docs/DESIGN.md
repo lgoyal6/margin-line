@@ -292,11 +292,12 @@ planned complement and is not built.
 
 ## Phase 1 results: the score predicts liquidation
 
-Walk-forward backtest on real Perpl mainnet history, blocks 95,000,000 to 112,140,000 (Aug 11 to Oct 9,
-2026; about 33.7 million decoded events, 1,717 liquidations, 11 markets). `data/decode.py` turns raw
-chunks into per-event tables; `data/backtest.py` scores every trader at weekly checkpoints using only
-earlier events, then checks who was liquidated in the following 7 or 14 days, among traders who kept
-trading. The approval rule was fixed before looking at outcomes:
+Walk-forward backtest on all of Perpl's mainnet history, blocks 54,972,991 to 112,140,000 (Feb 12 to
+Oct 9, 2026; about 70 million decoded events, 3,643 liquidations). `data/decode.py` turns raw chunks
+into per-event tables; `data/backtest.py` scores every trader at weekly checkpoints, from two weeks
+after Perpl launched until the outcome window runs out, using only events before the checkpoint, then
+checks who was liquidated in the following 7 or 14 days among traders who kept trading. The approval
+rule was fixed before looking at outcomes:
 
 - at least 3 active days and 10 closed trades;
 - no liquidation so far;
@@ -308,42 +309,48 @@ trading. The approval rule was fixed before looking at outcomes:
 The continuous score ranks return on capital, win rate, leverage (lower is better), drawdown and
 active days, with a heavy penalty for any past liquidation.
 
-| 7-day horizon, 2,867 trader-checkpoints | Liquidated |
+| 7-day horizon, 15,173 trader-checkpoints over 32 weeks | Liquidated |
 |---|---|
-| All active traders | 14.2% |
-| Approved by Margin Line (205) | **2.9%** (95% CI 1.3% to 6.2%) |
-| Denied | 15.1% |
-| Experienced only (3+ days, 10+ closes) | 13.2% |
-| Experienced but denied by Margin Line | 14.3% |
+| All active traders | 12.3% |
+| Approved by Margin Line (560, 179 distinct traders) | **3.8%** (95% CI 2.5% to 5.7%) |
+| Denied | 12.7% |
+| Experienced only (3+ days, 10+ closes) | 12.9% |
+| Experienced but denied by Margin Line | 13.3% |
 
 | Ranking power (AUC, 0.5 = chance) | 7 days | 14 days |
 |---|---|---|
-| Margin Line score | **0.70** | **0.69** |
-| Volume (naive lender) | 0.57 | 0.56 |
-| Raw realized PnL | 0.43 | 0.43 |
-| Random | 0.51 | 0.52 |
+| Margin Line score | **0.66** | **0.66** |
+| Volume (naive lender) | 0.52 | 0.52 |
+| Raw realized PnL | 0.44 | 0.44 |
+| Random | 0.50 | 0.49 |
 
-- Every weekly checkpoint agrees at 7 days: approved liquidation rates of 5.8%, 4.4%, 0%, 2.7% and 0%
-  against 11% to 19% for everyone.
-- At 14 days: approved 5.5% against 21.2% denied. One 14-day checkpoint (Sep 22) is weaker: 11.8% of 34
-  approved against 17.6% for everyone, still lower but within noise.
-- The edge is not just experience: Margin Line approvals against experienced traders it denied,
-  one-sided Fisher exact p = 1.3e-7 (7 days) and 1.0e-9 (14 days).
+- Approved traders were liquidated less often than the average trader in 26 of 32 weekly checkpoints
+  (7 days) and 25 of 31 (14 days).
+- At 14 days: approved 6.7% against 19.0% denied.
+- The edge is not just experience: approvals against experienced traders it denied, one-sided Fisher
+  exact p = 4e-14 (7 days) and 1e-18 (14 days).
+- The edge is weaker in Perpl's first months: February to May, 8.3% of approvals liquidated against
+  14.4% denied (72 approvals); June to October, 3.1% against 12.4% (488 approvals). A young market
+  with few experienced traders gives the rule less to work with.
 - Raw profit ranks worse than random: the biggest recent winners are disproportionately the ones who
   blow up, which is why the score uses risk-adjusted return and leverage rather than profit.
 
-**Rerun on more data.** First run: blocks 95M to 107M, 3.5% approved against 15.7% denied, AUC 0.70.
-Adding 107M to 112.14M (5.1M more blocks) left the conclusion unchanged and slightly stronger.
+**How these numbers changed.** The first reported run covered blocks 95M to 107M (six weekly
+checkpoints): 3.5% approved against 15.7% denied. Running on all history surfaced two pipeline bugs,
+both fixed: (1) the block-to-time table started at block 95M, so every earlier event was stamped
+Aug 11 and veterans' active days collapsed to one; it now has real timestamps from Perpl's first block;
+(2) the backtest read only Perpl's V2 position events, introduced at block 78,474,495 (early June), so
+positions opened before June had no leverage or deposit and passed the leverage rule by default; V1
+events are now read too. With both bugs present, February to May showed no edge at all (12.7% of
+approvals liquidated against 11.6%); the fix removed 252 early approvals that were high-leverage traders.
 
-**Limits.** Only 78 distinct traders were ever approved, and traders recur across checkpoints, so the
-p-values overstate independence; the effect size is large enough that the conclusion stands, but the
-pilot book is small. The wash filter barely fires on this data (2 accounts at early checkpoints, none of
-them otherwise approved); rings are covered by scripted tests (Phase 5). Funding-source clustering
-(shared first AUSD inflow) is not implemented yet.
+**Limits.** Traders recur across weekly checkpoints, so the p-values overstate independence; the
+effect is large and consistent across weeks, so the conclusion stands. Funding-source clustering
+(shared first AUSD inflow) is not implemented.
 
-**Reproduce.** `data/refresh.sh` downloads any newly published ranges, decodes, and reruns both
-horizons; the backtest detects the longest gap-free range on disk. Reports: `docs/evidence/backtest-h7.json`
-and `docs/evidence/backtest-h14.json`.
+**Reproduce.** `data/refresh.sh` downloads any newly published ranges, decodes them (streaming to
+disk, so full history fits in memory), and reruns both horizons. Reports:
+`docs/evidence/backtest-h7.json` and `docs/evidence/backtest-h14.json`.
 
 ## Phase 2 implementation notes
 
@@ -533,18 +540,41 @@ gas, and the deployer needs a faucet top-up first.
 
 ## Live testnet deployment
 
-`deployments/monad-testnet.json` (deployed at block 69,903,790 by `script/Deploy.s.sol`, rpId
-`localhost` for the end-to-end tests):
+`deployments/monad-testnet.json`: the full system through `MarketFactory`, deployed from block
+69,981,100 by `script/Deploy.s.sol` (rpId `localhost` for the end-to-end tests). One BTC market,
+seeded with $7,000 senior and $3,000 junior. Score epoch 2 (all 5,257 scored Perpl mainnet
+accounts, 108 approved, root `0x7de0c84c...5881d196`) is posted with a 0.1 MON bond and finalizes after
+its one-day challenge window. Epoch 1 was built before the full-history fixes; it was retired live
+through the dispute path: a bonded arbitrated challenge, the guardian ruling it invalid, and the
+challenger claiming both bonds. The earlier Phase 0 to 4 deployment is in git history.
 
 | Contract | Address |
 |---|---|
-| IdentityRegistry | `0x4eFfb02D6BCF44687a1ae22618FBBd5CEf43fFdE` |
-| CreditPool | `0xCf6Ba3c5CAC06E0Ca09468028707062624f128Ad` |
-| TradeGuard | `0x648EA518b9553b2bc86F99EaD6Da7E5cdD39921B` |
-| CreditManager | `0x0407fE366340d5006AAAd1624C6beeB67AD82697` |
-| CreditLine implementation | `0x800a957168524fd9840206AEEdDD0CF7D94348B0` |
-| CircuitBreaker | `0x1f93cC81c93c2e77DefBb84403DB809597190C53` |
-| HistoryLinkRegistry | `0xaD7B01459bf16A260C2256cDA4688a219242450c` |
+| IdentityRegistry | `0xc1b2aC9321335789F4bdC28B2f423E474d672FaD` |
+| MarketFactory | `0xD94860A4587c5e8CD3D601d61577c33C297a335c` |
+| RiskLens | `0x77C6cAC3FA8476e00b15d15a659E8Afc1C315C06` |
+| HistoryLinkRegistry | `0xa2621f741E66139DD579FB250ed9441624791E89` |
+| CreditPool | `0x8Ec3a1683F1a74800AC0c9a242455a98b75E2A54` |
+| Senior vault | `0xadBD73750d49201b8c42Dc9FDc8dec7Be7716Bc6` |
+| Junior vault | `0x5e430A7b1924f0eb0FF129f5Bc6b7AD0256DB727` |
+| CreditManager | `0x8B300a2336e359b8490A46BE5742Ee49996BD95f` |
+| TradeGuard | `0x7a2635b16D51F2F2bA2045aA3723f039C6ed1BC9` |
+| CircuitBreaker | `0xC61d993336C4c94feEF3f70B186609596f6d3cE9` |
+| RiskCurator | `0x7E3808E8124C3E42546F3e2f16f7f8c944208A47` |
+| CreditLine implementation | `0x0165dE2063fe2277C144fc6e2c26648833802BF2` |
+| ScoreOracle | `0xE3520b1344b9E088AbD2313b17d17df00469e463` |
+
+Live evidence: `e2e/evidence/newcomer-testnet/` (`LIVE=1` run of `e2e/src/newcomer.ts`). Through the
+app, a new passkey account opened a line, granted and revoked a session key, opened and closed a BTC
+long on Perpl's real book, swept 248.73 AUSD with a passkey approval, closed the line (pool repaid,
+zero loss) and lent to junior. Two steps happen outside the UI on testnet because their buttons are
+fork-only: the deployer sends the new wallet 0.8 MON and 2,000 test AUSD, and approves it for $1,500
+as underwriter (the score epoch is still in its challenge window, and a mainnet score cannot be
+linked on testnet).
+
+Cost on Monad, for planning: the full deploy cost 5.08 MON at 102 gwei (MarketFactory 2.38 MON,
+`createMarket` 2.20 MON), more than the simulation suggested, because Monad bills the gas limit.
+Seeding cost 0.055 MON and posting the epoch 0.12 MON including the bond.
 
 Notes from going live on Monad: a wallet funded in the last block cannot send yet (the reserve-balance
 check reads a balance a few blocks old), so scripts wait four blocks after funding; and a reverted
@@ -558,7 +588,7 @@ Each phase has a pass or fail exit test. Order is by risk: real-data and key-bou
 | # | Phase | Exit test |
 |---|---|---|
 | 0 | Prove the hard parts: contract-owned Perpl account trades and blocks withdrawal; full mainnet history indexed | Fork tests pass on testnet and mainnet (done); live testnet transaction hashes (done); indexed totals reconcile with Perpl's public numbers (needs HyperSync token) |
-| 1 | Does the score work: backtest on real history | Reproducible report showing the score separates safe from risky traders (done: 2.9% vs 15.1% liquidation, AUC 0.70, through Oct 9) |
+| 1 | Does the score work: backtest on real history | Reproducible report showing the score separates safe from risky traders (done, all of Perpl history Feb to Oct: 3.8% vs 12.7% liquidated within 7 days, AUC 0.66, p 4e-14) |
 | 2 | Core contracts: pool, line, router, settlement | Six invariants hold across at least 10,000 fuzz runs (done); fork replay of the worst real day loses no more than principal (pending full history) |
 | 3 | Identity: passkeys, P256, session keys, history linking, recovery | Passkey-only onboarding end to end (done, live testnet); a scoped session key cannot sweep (done) |
 | 4 | Enforcement: permissionless freeze, bounty, keeper, circuit breakers | An independent bot freezes a line within one block on testnet (built and live; best measured lag 2 blocks, 0.52 s; one block not yet met) |
