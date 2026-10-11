@@ -1,0 +1,139 @@
+{
+  "actors": {
+    "keeper": "0x09d78b4af44a33C2F68182193c5d7c817ed0c7D8",
+    "borrower": "0xfECD663C1586164CEE7621d13CDF4Eb262720fd1",
+    "reuse": true
+  },
+  "top_up_borrower": {
+    "hash": "0x6aa94e52e9d02e2d401da06c0ab657def18b5c920f966c39daec600bc8b6aa5f",
+    "block": "69905471",
+    "status": "success",
+    "gasUsed": "21165"
+  },
+  "resumed_line": {
+    "line": "0x5DA507413DaafcfEeb8f2C2b4b8711027936Ca46"
+  },
+  "open_btc_long": {
+    "hash": "0xea38c0cf46ea83f2868021e105998d1d79e65278ba1ea0d268963bbef2d28116",
+    "block": "69905478",
+    "status": "success",
+    "gasUsed": "900000"
+  },
+  "line": {
+    "line": "0x5DA507413DaafcfEeb8f2C2b4b8711027936Ca46",
+    "healthBps": "19997"
+  },
+  "make_unhealthy": {
+    "hash": "0x65f6171ae4ab7f7714d0d226b405adf784e1faae0e8621fc98897a269dbe0021",
+    "block": "69905489",
+    "status": "success",
+    "gasUsed": "36528"
+  },
+  "liveness": {
+    "unhealthyInBlock": "69905489",
+    "frozenInBlock": "69905491",
+    "blocksAfterUnhealthy": "2",
+    "freezeTx": "0x1ad699a53dd488f6161015e67902f4ac09151107deacbd67f16f03517b36cff4"
+  },
+  "outcome": {
+    "state": 3,
+    "enforcer": "0x09d78b4af44a33C2F68182193c5d7c817ed0c7D8",
+    "keeperBountyAUSD": "950000",
+    "poolPrincipalOfLine": "0",
+    "poolTotalLosses": "0"
+  },
+  "restore_risk_params": {
+    "hash": "0x49c63b78a0f2bb15046c0507a2cf519a1b8cb671987354454d51d8b0fb40911f",
+    "block": "69905500",
+    "status": "success",
+    "gasUsed": "36528"
+  },
+  "keeperLog": [
+    {
+      "t": "2026-10-10T19:12:14.972Z",
+      "event": "start",
+      "keeper": "0x09d78b4af44a33C2F68182193c5d7c817ed0c7D8",
+      "rpc": "https://testnet-rpc.monad.xyz",
+      "manager": "0x0407fE366340d5006AAAd1624C6beeB67AD82697",
+      "balanceMON": "0.219019396"
+    },
+    {
+      "t": "2026-10-10T19:12:14.973Z",
+      "event": "warn_reserve",
+      "balanceMON": "0.219019396",
+      "note": "Monad keeps a 10 MON reserve per EOA"
+    },
+    {
+      "t": "2026-10-10T19:12:15.890Z",
+      "event": "line_discovered",
+      "line": "0xf4b313423aceaaC8f68F4AFAAef03c2B904135EB",
+      "block": "69904121"
+    },
+    {
+      "t": "2026-10-10T19:12:16.189Z",
+      "event": "line_discovered",
+      "line": "0xa772fE57d9EEF6dA7133556a46c3DCF8aC842416",
+      "block": "69904454"
+    },
+    {
+      "t": "2026-10-10T19:12:17.055Z",
+      "event": "line_discovered",
+      "line": "0x5DA507413DaafcfEeb8f2C2b4b8711027936Ca46",
+      "block": "69905320"
+    },
+    {
+      "t": "2026-10-10T19:12:17.647Z",
+      "event": "unhealthy",
+      "line": "0x5DA507413DaafcfEeb8f2C2b4b8711027936Ca46",
+      "health": "19997",
+      "threshold": "25000",
+      "seenAtBlock": "69905489"
+    },
+    {
+      "t": "2026-10-10T19:12:18.169Z",
+      "event": "tx",
+      "action": "freeze",
+      "line": "0x5DA507413DaafcfEeb8f2C2b4b8711027936Ca46",
+      "hash": "0x1ad699a53dd488f6161015e67902f4ac09151107deacbd67f16f03517b36cff4",
+      "block": "69905491",
+      "status": "success",
+      "gasUsed": "380000",
+      "gasLimit": "380000"
+    },
+    {
+      "t": "2026-10-10T19:12:18.170Z",
+      "event": "frozen",
+      "line": "0x5DA507413DaafcfEeb8f2C2b4b8711027936Ca46",
+      "seenAtBlock": "69905489",
+      "frozenInBlock": "69905491",
+      "blocksAfterSeen": "2"
+    },
+    {
+      "t": "2026-10-10T19:12:19.066Z",
+      "event": "tx",
+      "action": "unwind",
+      "line": "0x5DA507413DaafcfEeb8f2C2b4b8711027936Ca46",
+      "hash": "0xb6709aee578cf82d3f6f728f1c40c4fa29fe8a694e2bcb8b5a1485ae12595309",
+      "block": "69905494",
+      "status": "success",
+      "gasUsed": "455075",
+      "gasLimit": "455075"
+    },
+    {
+      "t": "2026-10-10T19:12:19.738Z",
+      "event": "tx",
+      "action": "settleFrozen",
+      "line": "0x5DA507413DaafcfEeb8f2C2b4b8711027936Ca46",
+      "hash": "0x39ce2bfa5f2fb07269386e5639ea040ad5951ff149a0e55b07bd71793d83bbf2",
+      "block": "69905496",
+      "status": "success",
+      "gasUsed": "575037",
+      "gasLimit": "575037"
+    },
+    {
+      "t": "2026-10-10T19:12:19.738Z",
+      "event": "settled",
+      "line": "0x5DA507413DaafcfEeb8f2C2b4b8711027936Ca46"
+    }
+  ]
+}

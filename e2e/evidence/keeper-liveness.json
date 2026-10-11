@@ -1,0 +1,165 @@
+{
+  "actors": {
+    "keeper": "0x09d78b4af44a33C2F68182193c5d7c817ed0c7D8",
+    "borrower": "0xfECD663C1586164CEE7621d13CDF4Eb262720fd1"
+  },
+  "fund_keeper": {
+    "hash": "0xac7a988c88903b14876b9b58c205c234cd281974522ce1cc84e2535cfae5a7ce",
+    "block": "69904437",
+    "status": "success",
+    "gasUsed": "21165"
+  },
+  "fund_borrower": {
+    "hash": "0x4dc31aaa996dcea742003e985d84b6c68d609802086878123487a42d3d37e4c4",
+    "block": "69904440",
+    "status": "success",
+    "gasUsed": "21165"
+  },
+  "fund_borrower_ausd": {
+    "hash": "0xff20b58ab988e835bfa5220da82cbb31b9ca8a8295f8513e92d3d1c7f23502b0",
+    "block": "69904442",
+    "status": "success",
+    "gasUsed": "72918"
+  },
+  "register_passkey": {
+    "hash": "0x938d325b74ad76be10d2f27bd66776fa5451d031030f1f3be05a39bb778ee800",
+    "block": "69904446",
+    "status": "success",
+    "gasUsed": "107982"
+  },
+  "underwriter_approve": {
+    "hash": "0x816ddf58b80b231cd0363c1627357a3e71d7543c26c387d1628ddeac590109bf",
+    "block": "69904449",
+    "status": "success",
+    "gasUsed": "61805"
+  },
+  "approve_deposit": {
+    "hash": "0xb0604986892e9be36ab398d458208a5e33e6f16deebfc2169421a1a8f93bbcc4",
+    "block": "69904451",
+    "status": "success",
+    "gasUsed": "71087"
+  },
+  "open_line": {
+    "hash": "0xc51cdc8b7be6cf2b36f18da16d974330a4578592c9322efd912e309ddf0dc12a",
+    "block": "69904454",
+    "status": "success",
+    "gasUsed": "1312085"
+  },
+  "open_btc_long": {
+    "hash": "0x9132ff73aef3cfb99f0290b786fbeefa677ce2a4a82163bf94dbb4da5c1b660a",
+    "block": "69904457",
+    "status": "success",
+    "gasUsed": "579568"
+  },
+  "line": {
+    "line": "0xa772fE57d9EEF6dA7133556a46c3DCF8aC842416",
+    "healthBps": "19997"
+  },
+  "make_unhealthy": {
+    "hash": "0xadf5e18aadb0cec462c0328caf27bd5ef73ea0f6baef98f86b41d2881edea18a",
+    "block": "69904465",
+    "status": "success",
+    "gasUsed": "36528"
+  },
+  "liveness": {
+    "unhealthyInBlock": "69904465",
+    "frozenInBlock": "69904469",
+    "blocksAfterUnhealthy": "4",
+    "freezeTx": "0xf7c260c902dd209c2f3ac508e6261485c8ba69796635a43842fd280dba5a124d"
+  },
+  "outcome": {
+    "state": 3,
+    "enforcer": "0x09d78b4af44a33C2F68182193c5d7c817ed0c7D8",
+    "keeperBountyAUSD": "500000",
+    "poolPrincipalOfLine": "0",
+    "poolTotalLosses": "0"
+  },
+  "restore_risk_params": {
+    "hash": "0x42fecde92875868fd9a7454bd8f01bc70b1220576abba1128d300cd8a41106b4",
+    "block": "69904483",
+    "status": "success",
+    "gasUsed": "36528"
+  },
+  "keeperLog": [
+    {
+      "t": "2026-10-10T19:07:06.972Z",
+      "event": "start",
+      "keeper": "0x09d78b4af44a33C2F68182193c5d7c817ed0c7D8",
+      "rpc": "https://testnet-rpc.monad.xyz",
+      "manager": "0x0407fE366340d5006AAAd1624C6beeB67AD82697",
+      "balanceMON": "0.25"
+    },
+    {
+      "t": "2026-10-10T19:07:06.973Z",
+      "event": "warn_reserve",
+      "balanceMON": "0.25",
+      "note": "Monad keeps a 10 MON reserve per EOA"
+    },
+    {
+      "t": "2026-10-10T19:07:07.591Z",
+      "event": "line_discovered",
+      "line": "0xf4b313423aceaaC8f68F4AFAAef03c2B904135EB",
+      "block": "69904121"
+    },
+    {
+      "t": "2026-10-10T19:07:07.872Z",
+      "event": "line_discovered",
+      "line": "0xa772fE57d9EEF6dA7133556a46c3DCF8aC842416",
+      "block": "69904454"
+    },
+    {
+      "t": "2026-10-10T19:07:08.840Z",
+      "event": "unhealthy",
+      "line": "0xa772fE57d9EEF6dA7133556a46c3DCF8aC842416",
+      "health": "19997",
+      "threshold": 25000,
+      "seenAtBlock": "69904465"
+    },
+    {
+      "t": "2026-10-10T19:07:10.347Z",
+      "event": "tx",
+      "action": "freeze",
+      "line": "0xa772fE57d9EEF6dA7133556a46c3DCF8aC842416",
+      "hash": "0xf7c260c902dd209c2f3ac508e6261485c8ba69796635a43842fd280dba5a124d",
+      "block": "69904469",
+      "status": "success",
+      "gasUsed": "373840",
+      "gasLimit": "373840"
+    },
+    {
+      "t": "2026-10-10T19:07:10.348Z",
+      "event": "frozen",
+      "line": "0xa772fE57d9EEF6dA7133556a46c3DCF8aC842416",
+      "seenAtBlock": "69904465",
+      "frozenInBlock": "69904469",
+      "blocksAfterSeen": "4"
+    },
+    {
+      "t": "2026-10-10T19:07:11.810Z",
+      "event": "tx",
+      "action": "unwind",
+      "line": "0xa772fE57d9EEF6dA7133556a46c3DCF8aC842416",
+      "hash": "0x57a2c67937269e0ae647be4f7ff77b4204942ce29eaa546c13fd4d89d7732d6a",
+      "block": "69904475",
+      "status": "success",
+      "gasUsed": "482240",
+      "gasLimit": "482240"
+    },
+    {
+      "t": "2026-10-10T19:07:12.556Z",
+      "event": "tx",
+      "action": "settleFrozen",
+      "line": "0xa772fE57d9EEF6dA7133556a46c3DCF8aC842416",
+      "hash": "0xc927215163cd91c242c3446740c5a5f775d657649848402253fc9225c7743261",
+      "block": "69904478",
+      "status": "success",
+      "gasUsed": "624122",
+      "gasLimit": "624122"
+    },
+    {
+      "t": "2026-10-10T19:07:12.557Z",
+      "event": "settled",
+      "line": "0xa772fE57d9EEF6dA7133556a46c3DCF8aC842416"
+    }
+  ]
+}

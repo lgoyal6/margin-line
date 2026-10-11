@@ -1,0 +1,20 @@
+{
+  "name": "margin-line-e2e",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end passkey onboarding: a real browser authenticator (virtual, with PRF) drives Mera, and its WebAuthn assertions are verified onchain on Monad testnet.",
+  "scripts": {
+    "build": "esbuild page/onboard.ts --bundle --format=esm --outfile=public/onboard.js",
+    "passkey-e2e": "npm run build && node --experimental-strip-types src/run.ts"
+  },
+  "dependencies": {
+    "@category-labs/mera": "0.2.0",
+    "@scure/bip32": "2.4.0",
+    "@scure/bip39": "2.4.0",
+    "playwright": "1.62.0",
+    "viem": "2.56.9"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "chainId": 10143,
+  "deployment": {
+    "accountFactory": "0xf42548Ccb3300Bc76c35dc2D347416db2E8d7209",
+    "ausd": "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+    "breaker": "0x1f93cC81c93c2e77DefBb84403DB809597190C53",
+    "chainId": 10143,
+    "deployedAtBlock": 69903790,
+    "exchange": "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+    "guard": "0x648EA518b9553b2bc86F99EaD6Da7E5cdD39921B",
+    "historyLinks": "0xaD7B01459bf16A260C2256cDA4688a219242450c",
+    "identity": "0x4eFfb02D6BCF44687a1ae22618FBBd5CEf43fFdE",
+    "lineImplementation": "0x800a957168524fd9840206AEEdDD0CF7D94348B0",
+    "manager": "0x0407fE366340d5006AAAd1624C6beeB67AD82697",
+    "pool": "0xCf6Ba3c5CAC06E0Ca09468028707062624f128Ad",
+    "rpId": "localhost"
+  },
+  "onboarded": {
+    "wallet": "0x311AE5E7C64D8Bb91f06Fea12aFe3Fa226BDa634",
+    "credentialId": "wRnfIahw4DU3q3BnT7FolbfhT7yhoWl7jmEadr2EECs",
+    "qx": "0x6277a448747b23d71c61b57517557d85392041a98241e4c70da23f05bbcb5d47",
+    "qy": "0x11c17e8ee507639b183d409526f7ed6fa60fcca6fb13e7ced87645b4925dc2b8",
+    "rpId": "localhost"
+  },
+  "fund_mon": {
+    "hash": "0xc0b0a3b12c8b502742649cc59230818df560fa25f1094d11880c85e80aae95b9",
+    "block": "69904109",
+    "status": "success",
+    "gasUsed": "21165"
+  },
+  "fund_ausd": {
+    "hash": "0x34e9557132f025b1c06d7214d7447d6cca96d0b1b5566a0df3376bf853abdf50",
+    "block": "69904111",
+    "status": "success",
+    "gasUsed": "72918"
+  },
+  "register_passkey": {
+    "hash": "0x63831177412265877150a605d59276f17561b68b28bdd2ac799c5b485ea52f8d",
+    "block": "69904115",
+    "status": "success",
+    "gasUsed": "107982"
+  },
+  "underwriter_approve": {
+    "hash": "0x6382282e9f16caf1114d49b88c78afe490137b9a5752ee9387668ec696213595",
+    "block": "69904117",
+    "status": "success",
+    "gasUsed": "61805"
+  },
+  "approve_deposit": {
+    "hash": "0xf5e370c83e8e30952707ac1f5198ff42c60824a95bd0c74ee384f1b395b3df29",
+    "block": "69904119",
+    "status": "success",
+    "gasUsed": "71087"
+  },
+  "open_line": {
+    "hash": "0xaf8cde7af3b346a9b9f7159286e33719d4e11b979343da4ef60489661982affa",
+    "block": "69904121",
+    "status": "success",
+    "gasUsed": "1312085"
+  },
+  "line": {
+    "line": "0xf4b313423aceaaC8f68F4AFAAef03c2B904135EB",
+    "healthBps": "20000"
+  },
+  "browser_assertion": {
+    "clientDataJSON": "{\"type\":\"webauthn.get\",\"challenge\":\"v70vj93_lc8Wgs5Z_GBIHMEMh-hPE74cPkCEhFFHpA8\",\"origin\":\"http://localhost:5199\",\"crossOrigin\":false}",
+    "authenticatorDataLength": 37
+  },
+  "refused_tampered_sweep": {
+    "requested": "200000000",
+    "approved": "20000000",
+    "error": "InvalidAssertion"
+  },
+  "sweep_with_passkey": {
+    "hash": "0x6f5ae93d857af0572a9af93ce634ed0573d3a11bfcde3b8b44b56ed2c1ba5cdd",
+    "block": "69904124",
+    "status": "success",
+    "gasUsed": "528800"
+  },
+  "swept": {
+    "received": "20000000"
+  },
+  "close_with_passkey": {
+    "hash": "0x16b823b82be8efb2eaecda8851f14a01a0f70f72dce50f54616da6e951c296c0",
+    "block": "69904126",
+    "status": "success",
+    "gasUsed": "571020"
+  },
+  "closed": {
+    "state": 3
+  }
+}
