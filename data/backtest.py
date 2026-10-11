@@ -80,16 +80,25 @@ def notional_usd(price: pl.Expr, lot: pl.Expr, perp: pl.Expr) -> pl.Expr:
 
 def build_tables(to_ts):
     """Per-account event tables with timestamps and USD amounts."""
-    opens = load("PositionOpenedV2").select(
-        "block", "tx", "accountId", "perpId",
-        (pl.col("leverageHdths") / 100).alias("lev"), usd(pl.col("depositCNS")).alias("deposit"),
-        usd(pl.col("insFeeCNS") + pl.col("protFeeCNS")).alias("fee"),
-    )
-    incs = load("PositionIncreasedV2").select(
-        "block", "tx", "accountId", "perpId",
-        (pl.col("leverageHdths") / 100).alias("lev"), usd(pl.col("endDepositCNS") - pl.col("startDepositCNS")).alias("deposit"),
-        usd(pl.col("insFeeCNS") + pl.col("protFeeCNS")).alias("fee"),
-    )
+    # Perpl moved from V1 to V2 position events at block 78,474,495 (early June 2026). Both carry the
+    # same fields used here (V2 only adds a price residue), so both are read: dropping V1 would leave
+    # every position opened before June without leverage or deposit data.
+    opens = pl.concat([
+        load(n).select(
+            "block", "tx", "accountId", "perpId",
+            (pl.col("leverageHdths") / 100).alias("lev"), usd(pl.col("depositCNS")).alias("deposit"),
+            usd(pl.col("insFeeCNS") + pl.col("protFeeCNS")).alias("fee"),
+        )
+        for n in ("PositionOpened", "PositionOpenedV2")
+    ], how="vertical_relaxed")
+    incs = pl.concat([
+        load(n).select(
+            "block", "tx", "accountId", "perpId",
+            (pl.col("leverageHdths") / 100).alias("lev"), usd(pl.col("endDepositCNS") - pl.col("startDepositCNS")).alias("deposit"),
+            usd(pl.col("insFeeCNS") + pl.col("protFeeCNS")).alias("fee"),
+        )
+        for n in ("PositionIncreased", "PositionIncreasedV2")
+    ], how="vertical_relaxed")
     realized = pl.concat([
         load(n).select("block", "tx", "accountId", "perpId", usd(pl.col("deltaPnlCNS") + pl.col("fundingCNS")).alias("pnl"))
         for n in ("PositionDecreased", "PositionClosed", "PositionInverted")
@@ -259,7 +268,9 @@ def main() -> None:
     to_ts = block_time()
     t = build_tables(to_ts)
     t0, t1 = float(to_ts([START_BLOCK])[0]), float(to_ts([END_BLOCK])[0])
-    checkpoints = [t0 + d * DAY for d in range(14, 43, 7) if t0 + d * DAY + H <= t1]
+    # Every week from two weeks after the data starts (so each trader has some history) until the
+    # last checkpoint whose outcome window still fits inside the data.
+    checkpoints = [t0 + d * DAY for d in range(14, 10_000, 7) if t0 + d * DAY + H <= t1]
 
     rng = np.random.default_rng(7)
     results, pooled = [], []
