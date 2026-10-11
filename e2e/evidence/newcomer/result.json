@@ -1,0 +1,67 @@
+{
+  "user": "0xC89A59daddA2F0dA010f5DFA5B9c1A907B301164",
+  "line": "0x1972CE01172759631A2A649BABdb8e081a85CFFe",
+  "steps": [
+    {
+      "step": "Create account with a passkey",
+      "ms": 1652
+    },
+    {
+      "step": "Get test funds (local fork)",
+      "ms": 1642
+    },
+    {
+      "step": "Register passkey onchain",
+      "ms": 1660
+    },
+    {
+      "step": "Check",
+      "ms": 1537
+    },
+    {
+      "step": "Approve this wallet for $2,000 (demo)",
+      "ms": 1657
+    },
+    {
+      "step": "Open credit line",
+      "ms": 4377
+    },
+    {
+      "step": "Grant session key with passkey",
+      "ms": 1761
+    },
+    {
+      "step": "Revoke session key",
+      "ms": 1646
+    },
+    {
+      "step": "Open long",
+      "ms": 2973
+    },
+    {
+      "step": "Close position",
+      "ms": 2009
+    },
+    {
+      "step": "Withdraw profit with passkey",
+      "ms": 2417
+    },
+    {
+      "step": "Close line with passkey",
+      "ms": 1795
+    },
+    {
+      "step": "Deposit",
+      "ms": 1868
+    }
+  ],
+  "checks": {
+    "swept": true,
+    "sweptAmount": "248673946",
+    "lineClosed": true,
+    "principalRepaid": true,
+    "poolLosses": "0",
+    "interestPaid": "44",
+    "lentToJunior": true
+  }
+}

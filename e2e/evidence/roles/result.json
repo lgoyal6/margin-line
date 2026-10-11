@@ -1,0 +1,32 @@
+{
+  "utilizationBps": "5145",
+  "lineCState": 3,
+  "lender": {
+    "queueText": "Request #1: $1,000.00, with $3,000.00 ahead of you\nCancel",
+    "requestId": 1,
+    "aheadOnchain": "3000000000",
+    "aheadMatches": true
+  },
+  "lenderSeniorShares": true,
+  "tightened": true,
+  "looseningRefused": true,
+  "pendingShown": true,
+  "stress": {
+    "shownLines": 3,
+    "shownLoss": 200732,
+    "shownJunior": 200732,
+    "directLoss": "2007319287",
+    "directJunior": "2007319278",
+    "matches": true
+  },
+  "explorer": {
+    "linesEver": 4,
+    "openNow": 3,
+    "everFrozen": 1,
+    "bounties": 1000,
+    "lentOut": 5300000,
+    "poolLosses": 0,
+    "rows": 4,
+    "matches": true
+  }
+}
