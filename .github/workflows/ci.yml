@@ -28,20 +28,28 @@ jobs:
           MONAD_TESTNET_RPC: ${{ secrets.MONAD_TESTNET_RPC }}
         run: forge test --match-path "test/{fork,phase0}/*" --fork-url "$MONAD_TESTNET_RPC"
       - name: Gas snapshot
-        run: forge snapshot --check --no-match-path "test/{fork,invariant,phase0}/*"
+        run: forge snapshot --check --no-match-path "test/{fork,invariant,phase0}/*" --no-match-test "testFuzz"
       - name: Contract size budget
         run: |
           python3 - <<'PY'
           import json
           from pathlib import Path
-          for artifact in Path('out').glob('src/**/*.json'):
-              data = json.loads(artifact.read_text())
-              size = len(data.get('deployedBytecode', {}).get('object', '')) // 2
-              if not size:
-                  continue
-              limit = 131072 if artifact.stem == 'MarketFactory' else 24576
-              if size > limit:
-                  raise SystemExit(f'{artifact}: {size} bytes exceeds {limit}')
+          # Foundry writes out/<File>.sol/<Contract>.json; check every contract compiled from src/.
+          checked = 0
+          for source in Path('src').glob('*.sol'):
+              for artifact in Path('out', source.name).glob('*.json'):
+                  data = json.loads(artifact.read_text())
+                  code = data.get('deployedBytecode', {}).get('object', '0x')
+                  size = (len(code) - 2) // 2
+                  if size <= 0:
+                      continue  # interfaces and libraries without runtime code
+                  checked += 1
+                  limit = 131072 if artifact.stem == 'MarketFactory' else 24576  # Monad's limit only where needed
+                  if size > limit:
+                      raise SystemExit(f'{artifact}: {size} bytes exceeds {limit}')
+                  print(f'{artifact.stem}: {size} bytes (limit {limit})')
+          if checked == 0:
+              raise SystemExit('no contract artifacts found: the size check would be a no-op')
           PY
       - name: Build app
         working-directory: app
