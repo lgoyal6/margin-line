@@ -13,6 +13,7 @@ Usage: .agent-work/venv/bin/python data/decode.py
 import gzip
 import json
 import os
+import shutil
 import sys
 from collections import defaultdict
 from multiprocessing import Pool
@@ -23,6 +24,7 @@ import polars as pl
 HERE = Path(__file__).resolve().parent
 SOURCES = [HERE / "raw" / "history", HERE / "raw" / "perpl"]
 OUT = HERE / "derived" / "events"
+PARTS = HERE / "derived" / "parts"
 
 ABI = json.loads((HERE / "perpl_events_abi.json").read_text())
 TOPICS = json.loads((HERE / "perpl_topics.json").read_text())
@@ -76,22 +78,38 @@ def _frame(rows: list) -> pl.DataFrame:
     return pl.DataFrame(data)
 
 
+def decode_to_parts(path: str) -> list[str]:
+    """Decode one chunk and write each event's rows to its own small Parquet part, so no process ever
+    holds the whole history in memory."""
+    written = []
+    for name, rows in decode_file(path).items():
+        d = PARTS / name
+        d.mkdir(parents=True, exist_ok=True)
+        _frame(rows).write_parquet(d / (Path(path).name.removesuffix(".jsonl.gz") + ".parquet"))
+        written.append(name)
+    return written
+
+
 def main() -> None:
     files = [str(p) for src in SOURCES if src.exists() for p in sorted(src.glob("*.jsonl.gz"))]
     print(f"{len(files)} chunks", flush=True)
-    merged = defaultdict(list)
+    shutil.rmtree(PARTS, ignore_errors=True)
     with Pool(os.cpu_count()) as pool:
-        for i, rows in enumerate(pool.imap_unordered(decode_file, files, chunksize=8)):
-            for name, rs in rows.items():
-                merged[name].extend(rs)
+        for i, _ in enumerate(pool.imap_unordered(decode_to_parts, files, chunksize=8)):
             if (i + 1) % 500 == 0:
                 print(f"  decoded {i + 1}/{len(files)}", flush=True)
 
+    # Assemble one event table at a time from its parts. Parts can disagree on a column's type
+    # (Float64 where a value overflowed Int64), so they are combined with relaxed supertypes.
     OUT.mkdir(parents=True, exist_ok=True)
-    for name, rows in sorted(merged.items()):
-        df = _frame(rows).unique(subset=["block", "log_index"]).sort(["block", "log_index"])
-        df.write_parquet(OUT / f"{name}.parquet")
-        print(f"{name:32} {df.height:>10,}  blocks {df['block'].min()} -> {df['block'].max()}", flush=True)
+    for d in sorted(p for p in PARTS.iterdir() if p.is_dir()):
+        parts = [pl.scan_parquet(f) for f in sorted(d.glob("*.parquet"))]
+        df = (pl.concat(parts, how="diagonal_relaxed").unique(subset=["block", "log_index"])
+              .sort(["block", "log_index"]).collect(engine="streaming"))
+        df.write_parquet(OUT / f"{d.name}.parquet")
+        print(f"{d.name:32} {df.height:>10,}  blocks {df['block'].min()} -> {df['block'].max()}", flush=True)
+        del df
+    shutil.rmtree(PARTS, ignore_errors=True)
 
 
 if __name__ == "__main__":
