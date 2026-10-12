@@ -1,8 +1,9 @@
 // Phase 4 exit test on Monad testnet: an independent keeper freezes an unhealthy line within one block,
 // then unwinds its Perpl position and settles it, earning the freeze bounty.
 //
-// The line is made unhealthy without moving Perpl's price: the protocol owner raises the freeze
-// threshold above the line's health in block B. The keeper runs as a separate process with its own
+// The line is made unhealthy without moving Perpl's price: the curator tightens the freeze threshold
+// above the line's health in block B (instant), and submits the restore, which the timelock releases a
+// day later. The keeper runs as a separate process with its own
 // key and learns about the line only from chain data. We measure the freeze's block minus B.
 
 import { spawn } from "node:child_process";
@@ -13,6 +14,7 @@ import {
   createPublicClient,
   createWalletClient,
   defineChain,
+  encodeFunctionData,
   http,
   parseAbi,
   toHex,
@@ -41,7 +43,12 @@ const managerAbi = parseAbi([
   "function activeLine(address) view returns (address)",
   "function setRiskParams((uint16 freezeHealthBps, uint16 openHealthBps, uint16 sweepHealthBps) params, uint16 maxLeverageOnDepositBps)",
 ]);
-const identityAbi = parseAbi(["function registerFirstPasskey(bytes32 qx, bytes32 qy) returns (bytes32)"]);
+const curatorAbi = parseAbi([
+  "function tightenRisk((uint16 freezeHealthBps, uint16 openHealthBps, uint16 sweepHealthBps) p, uint16 maxLeverageOnDepositBps)",
+  "function submit(address target, bytes data) returns (bytes32)",
+  "function timelock() view returns (uint256)",
+]);
+const identityAbi = parseAbi(["function registerFirstPasskey(bytes32 qx, bytes32 qy) returns (bytes32)", "function hasPasskey(address) view returns (bool)"]);
 const erc20Abi = parseAbi([
   "function approve(address, uint256) returns (bool)",
   "function transfer(address, uint256) returns (bool)",
@@ -103,13 +110,19 @@ async function main() {
   if (reuse) {
     // Top up only what is short, then wait out Monad's lagged balance check.
     let last = 0n;
-    if ((await pub.getBalance({ address: keeper.address })) < 150_000_000_000_000_000n) {
-      last = (await wait(await asDeployer.sendTransaction({ to: keeper.address, value: 120_000_000_000_000_000n }), "top_up_keeper")).blockNumber;
+    if ((await pub.getBalance({ address: keeper.address })) < 300_000_000_000_000_000n) {
+      last = (await wait(await asDeployer.sendTransaction({ to: keeper.address, value: 250_000_000_000_000_000n }), "top_up_keeper")).blockNumber;
     }
-    if ((await pub.getBalance({ address: borrower.address })) < 130_000_000_000_000_000n) {
-      last = (await wait(await asDeployer.sendTransaction({ to: borrower.address, value: 100_000_000_000_000_000n }), "top_up_borrower")).blockNumber;
+    if ((await pub.getBalance({ address: borrower.address })) < 250_000_000_000_000_000n) {
+      last = (await wait(await asDeployer.sendTransaction({ to: borrower.address, value: 250_000_000_000_000_000n }), "top_up_borrower")).blockNumber;
     }
     if (last) await settleLag(last);
+    // Wallets carried over from an earlier deployment have no passkey in this one's registry yet.
+    if (!(await pub.readContract({ address: dep.identity, abi: identityAbi, functionName: "hasPasskey", args: [borrower.address] }))) {
+      const pk = p256.utils.randomSecretKey();
+      const pubkey = p256.getPublicKey(pk, false);
+      await wait(await asBorrower.writeContract({ address: dep.identity, abi: identityAbi, functionName: "registerFirstPasskey", args: [toHex(pubkey.slice(1, 33)), toHex(pubkey.slice(33))], ...fees }), "register_passkey");
+    }
   } else {
     await wait(await asDeployer.sendTransaction({ to: keeper.address, value: 250_000_000_000_000_000n }), "fund_keeper");
     const f = await wait(await asDeployer.sendTransaction({ to: borrower.address, value: 450_000_000_000_000_000n }), "fund_borrower");
@@ -121,14 +134,15 @@ async function main() {
     await wait(await asBorrower.writeContract({ address: dep.identity, abi: identityAbi, functionName: "registerFirstPasskey", args: [toHex(pubkey.slice(1, 33)), toHex(pubkey.slice(33))], ...fees }), "register_passkey");
   }
 
-  // The borrower opens a line and takes a small BTC long on Perpl's real book.
+  // The borrower opens a line at the market's maximum credit (3x deposit, health about 133%) and takes a
+  // small BTC long on Perpl's real book.
   // Resume with an already-open line if a previous attempt got that far.
   let line = (await pub.readContract({ address: dep.manager, abi: managerAbi, functionName: "activeLine", args: [borrower.address] })) as Address;
   if (line === "0x0000000000000000000000000000000000000000") {
     const expiry = Math.floor(Date.now() / 1000) + 86_400;
-    await wait(await asDeployer.writeContract({ address: dep.manager, abi: managerAbi, functionName: "approve", args: [borrower.address, deposit, 1_000, expiry] }), "underwriter_approve");
+    await wait(await asDeployer.writeContract({ address: dep.manager, abi: managerAbi, functionName: "approve", args: [borrower.address, deposit * 3n, 1_000, expiry] }), "underwriter_approve");
     await wait(await asBorrower.writeContract({ address: dep.ausd, abi: erc20Abi, functionName: "approve", args: [dep.manager, deposit], ...fees }), "approve_deposit");
-    await wait(await asBorrower.writeContract({ address: dep.manager, abi: managerAbi, functionName: "openLine", args: [deposit, deposit], ...fees }), "open_line");
+    await wait(await asBorrower.writeContract({ address: dep.manager, abi: managerAbi, functionName: "openLine", args: [deposit, deposit * 3n], ...fees }), "open_line");
     line = (await pub.readContract({ address: dep.manager, abi: managerAbi, functionName: "activeLine", args: [borrower.address] })) as Address;
   } else {
     step("resumed_line", { line });
@@ -145,9 +159,12 @@ async function main() {
   await wait(await asBorrower.writeContract({ address: line, abi: lineAbi, functionName: "trade", args: [[order]], gas: 900_000n, ...fees }), "open_btc_long");
   step("line", { line, healthBps: await pub.readContract({ address: line, abi: lineAbi, functionName: "healthBps" }) });
 
-  // Start the independent keeper.
+  // Start the independent keeper. Its deployment record starts at the current block, so line discovery
+  // (100-block log windows) does not rescan the whole deployment.
+  const keeperDeployment = resolve(ROOT, ".agent-work/keeper-liveness-deployment.json");
+  writeFileSync(keeperDeployment, JSON.stringify({ ...dep, deployedAtBlock: Number(await pub.getBlockNumber()) - 200 }));
   const proc = spawn(process.execPath, ["--experimental-strip-types", resolve(ROOT, "keeper/src/keeper.ts")], {
-    env: { ...process.env, KEEPER_KEY: keeperKey, RPC_URL: RPC },
+    env: { ...process.env, KEEPER_KEY: keeperKey, RPC_URL: RPC, DEPLOYMENT: keeperDeployment },
   });
   const keeperLog: Record<string, unknown>[] = [];
   const seen = new Promise<void>((res) => {
@@ -167,9 +184,9 @@ async function main() {
   proc.stderr.on("data", (b: Buffer) => console.error("  keeper err:", b.toString()));
   while (!keeperLog.some((e) => e.event === "line_discovered" && e.line === line)) await new Promise((r) => setTimeout(r, 300));
 
-  // Make the line unhealthy in block B by raising the freeze bar above its health (about 2.0).
+  // Make the line unhealthy in block B by tightening the freeze bar above its health (about 1.33).
   const rB = await wait(
-    await asDeployer.writeContract({ address: dep.manager, abi: managerAbi, functionName: "setRiskParams", args: [{ freezeHealthBps: 25_000, openHealthBps: 26_000, sweepHealthBps: 26_000 }, 30_000] }),
+    await asDeployer.writeContract({ address: dep.curator, abi: curatorAbi, functionName: "tightenRisk", args: [{ freezeHealthBps: 13_500, openHealthBps: 13_600, sweepHealthBps: 13_600 }, 30_000] }),
     "make_unhealthy",
   );
   const timeout = new Promise<void>((_, rej) => setTimeout(() => rej(new Error("keeper did not settle within 120 s")), 120_000));
@@ -191,13 +208,16 @@ async function main() {
     poolTotalLosses: await pub.readContract({ address: dep.pool, abi: poolAbi, functionName: "totalLosses" }),
   });
 
-  await wait(
-    await asDeployer.writeContract({ address: dep.manager, abi: managerAbi, functionName: "setRiskParams", args: [{ freezeHealthBps: 11_000, openHealthBps: 13_000, sweepHealthBps: 12_500 }, 30_000] }),
-    "restore_risk_params",
-  );
+  // Restoring is a loosening, so it goes through the curator's timelock: submit now, execute after it.
+  const restore = encodeFunctionData({ abi: managerAbi, functionName: "setRiskParams", args: [{ freezeHealthBps: 11_000, openHealthBps: 13_000, sweepHealthBps: 12_500 }, 30_000] });
+  const rR = await wait(await asDeployer.writeContract({ address: dep.curator, abi: curatorAbi, functionName: "submit", args: [dep.manager, restore] }), "submit_restore_risk_params");
+  const lock = await pub.readContract({ address: dep.curator, abi: curatorAbi, functionName: "timelock" });
+  const at = (await pub.getBlock({ blockNumber: rR.blockNumber })).timestamp + lock;
+  step("restore_pending", { target: dep.manager, data: restore, executableAfter: new Date(Number(at) * 1000).toISOString(),
+    execute: `cast send ${dep.curator} "execute(address,bytes)" ${dep.manager} ${restore}` });
   evidence.keeperLog = keeperLog;
   mkdirSync(resolve(ROOT, "e2e/evidence"), { recursive: true });
-  writeFileSync(resolve(ROOT, `e2e/evidence/keeper-liveness${reuse ? "-fast" : ""}.json`), JSON.stringify(evidence, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2));
+  writeFileSync(resolve(ROOT, `e2e/evidence/${process.env.EVIDENCE ?? `keeper-liveness${reuse ? "-fast" : ""}`}.json`), JSON.stringify(evidence, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2));
 }
 
 main().catch((e) => {
