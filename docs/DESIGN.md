@@ -474,9 +474,13 @@ block B; the keeper learns of it only from chain data):
 | First keeper (simulate, estimate, send, poll) | 69,904,465 | 69,904,465 | 69,904,469 | 4 blocks, 1.5 s | `e2e/evidence/keeper-liveness.json` |
 | Fast path (batched read, cached nonce and fees, sync send) | 69,905,489 | 69,905,489 | 69,905,491 | 2 blocks, 0.52 s | `e2e/evidence/keeper-liveness-fast.json` |
 | Pushed blocks (WebSocket newHeads, current deployment) | 70,250,222 | 70,250,222 | 70,250,224 | 2 blocks, 0.45 s | `e2e/evidence/keeper-liveness-ws.json` |
+| Read-free decision, trial 1 | 70,313,363 | 70,313,363 | 70,313,364 | **1 block** | `e2e/evidence/keeper-liveness-fast-path-1.json` |
+| Read-free decision, trial 2 | 70,313,795 | 70,313,795 | 70,313,796 | **1 block** | `e2e/evidence/keeper-liveness-fast-path-2.json` |
+| Read-free decision, trial 3 | 70,314,221 | 70,314,221 | 70,314,222 | **1 block** | `e2e/evidence/keeper-liveness-fast-path-3.json` |
 
 Both runs unwound the real Perpl position, settled the line, paid the keeper its bounty and left the
-pool with zero loss. **The exit target of one block was not met: the best measured lag is two blocks.**
+pool with zero loss. **The one-block exit target is met** by the read-free decision (below): three live
+runs out of three froze in the block right after the line became unhealthy.
 A transaction sent after seeing block B can land at the earliest in B+1, and only if it reaches the next
 leader before that block is sealed. From the test machine the RPC round trip was about 0.29 s against
 blocks of roughly 0.3 to 0.4 s, so B+2 is the floor there; a keeper colocated with a Monad RPC node is
@@ -488,13 +492,22 @@ about 290 ms over HTTP), and a pre-signed transaction sent the instant a block a
 next block 14 times out of 20 and in the one after 6 times (zero-value transfers, 0.044 MON). The keeper
 now runs on that push feed instead of polling, but it must still read the line's health before it can
 send a freeze (a freeze on a healthy line reverts, and Monad bills the full gas limit), and that one
-extra round trip was enough to miss the next block in the live run above. Reaching B+1 reliably needs
-the freeze decision without a read: for example, deciding locally from the pushed block's logs (mark
-and risk-parameter updates) against each line's precomputed freeze price. Not built.
+extra round trip was enough to miss the next block in the live run above.
 
-That run tightened the live market's freeze threshold to 135% (open and sweep 136%) through the
-curator; the restore to 110/130/125% is queued in the timelock and executable from Oct 12, 2026
-17:07 PDT (`restore_pending.execute` in the evidence file).
+**The fix: decide without a read.** Every check now also caches each line's equity, debt and Perpl
+positions with their marks, and the keeper subscribes to the logs that move health (Perpl's
+`MarkUpdated`, the manager's `RiskParamsSet`), which Monad pushes with the proposed block. On such a log
+it recomputes health locally (a position's value moves one for one with the mark) and sends the freeze
+immediately; the read-then-act path still runs on every block as the backstop. On the fork both
+triggers work (a 10% mark drop and a threshold change each freeze, unwind and settle; a 2% drop fires
+nothing). Live, the local estimate matched the chain's `healthBps` to within 1 bp in all three trials
+(13,659 vs 13,659; 13,859 vs 13,858; 14,060 vs 14,060), and all three froze in B+1, then unwound and
+settled with zero pool loss. Known limits: interest accrued since the last check is ignored (seconds of
+interest), and a wrong estimate costs one reverted freeze (Monad bills its 380k gas limit).
+
+These runs tightened the live market step by step through the curator, ending at freeze 141%, open and
+sweep 142%. The restore to 110/130/125% went through the timelock and was executed on Oct 12, 2026
+(tx `0x60b0e1b4106649c960540417f620d63c8dcae59e303196f20c57fe327d2d34c8`, block 70,537,014).
 
 ## Phase 6 implementation notes: capital and curation
 
@@ -617,7 +630,7 @@ Each phase has a pass or fail exit test. Order is by risk: real-data and key-bou
 | 1 | Does the score work: backtest on real history | Reproducible report showing the score separates safe from risky traders (done, all of Perpl history Feb to Oct: 3.8% vs 12.7% liquidated within 7 days, AUC 0.66, p 4e-14) |
 | 2 | Core contracts: pool, line, router, settlement | Six invariants hold across at least 10,000 fuzz runs (done); fork replay of the worst real day loses no more than principal (done: Aug 19, 2026, the day with the most Perpl liquidations (249) and the largest BTC move (+7.4%, 9% low to high), replayed minute by minute on a fork against six lines sized from epoch 2's approved traders, half long, half short. Approved terms: no line froze and the pool lost nothing, even with shorts entering at the day's low (lowest health 110.2%, freeze at 110%). Market-maximum credit with the keeper running: one line froze, unwound and settled, pool loss 0. Same with the keeper offline until the close: the pool lost $62.45 of that line's $1,580.54 principal, taken from the reserve, then junior, senior untouched. Pool accounting identity held every minute; unwinds filled at the guard's worst allowed price. `e2e/src/worst-day.ts`, `data/worst_day.py`, evidence in `e2e/evidence/worst-day/`) |
 | 3 | Identity: passkeys, P256, session keys, history linking, recovery | Passkey-only onboarding end to end (done, live testnet); a scoped session key cannot sweep (done) |
-| 4 | Enforcement: permissionless freeze, bounty, keeper, circuit breakers | An independent bot freezes a line within one block on testnet (built and live; best measured lag 2 blocks, 0.45 s with the keeper on Monad's pushed block feed; one block not yet met, though the network allows it: a transaction sent the instant a block is pushed lands in the next block 70% of the time, and the keeper's health read before freezing costs the rest) |
+| 4 | Enforcement: permissionless freeze, bounty, keeper, circuit breakers | An independent bot freezes a line within one block on testnet (done: the keeper decides from Monad's pushed logs without a read and froze in the next block in 3 of 3 live runs; `e2e/evidence/keeper-liveness-fast-path-{1,2,3}.json`) |
 | 5 | Score pipeline: wash netting, epoch roots, challenge window, explainer | Done: pairs and 3- and 5-account wash rings score zero while market-maker clients stay approved (`scorer/test_wash_ring.py`); a real epoch's proofs verify onchain on the fork (`scorer/verify_onchain.py`); `test/unit/ScoreOracle.t.sol` rejects an inconsistent leaf and exercises arbitration; `scorer/epoch.py` reproduces a 2,123-leaf root and proof |
 | 6 | Risk layer: tranches, caps, curator vaults, stress, insurance-fund monitor | Stress output matches a hand calculation (done: exact, and equals the realized loss after a real crash); curator rules enforced (done: instant tighten, timelocked loosen, guardian veto) |
 | 7 | Apps: trader, lender, curator, explorer, verification | Done: a newcomer completes borrow, trade and sweep unaided, through the UI only, twice in a row from a fresh fork (`e2e/src/newcomer.ts`); lender queue, curator rules, stress and explorer figures equal direct contract reads (`e2e/src/roles.ts`); see docs/APP.md |
