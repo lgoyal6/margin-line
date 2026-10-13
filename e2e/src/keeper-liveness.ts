@@ -14,7 +14,9 @@ import {
   createPublicClient,
   createWalletClient,
   defineChain,
+  encodeAbiParameters,
   encodeFunctionData,
+  keccak256,
   http,
   parseAbi,
   toHex,
@@ -42,11 +44,13 @@ const managerAbi = parseAbi([
   "function openLine(uint256 deposit, uint256 principal) returns (address)",
   "function activeLine(address) view returns (address)",
   "function setRiskParams((uint16 freezeHealthBps, uint16 openHealthBps, uint16 sweepHealthBps) params, uint16 maxLeverageOnDepositBps)",
+  "function riskParams() view returns ((uint16 freezeHealthBps, uint16 openHealthBps, uint16 sweepHealthBps))",
 ]);
 const curatorAbi = parseAbi([
   "function tightenRisk((uint16 freezeHealthBps, uint16 openHealthBps, uint16 sweepHealthBps) p, uint16 maxLeverageOnDepositBps)",
   "function submit(address target, bytes data) returns (bytes32)",
   "function timelock() view returns (uint256)",
+  "function pending(bytes32) view returns (uint256)",
 ]);
 const identityAbi = parseAbi(["function registerFirstPasskey(bytes32 qx, bytes32 qy) returns (bytes32)", "function hasPasskey(address) view returns (bool)"]);
 const erc20Abi = parseAbi([
@@ -134,15 +138,17 @@ async function main() {
     await wait(await asBorrower.writeContract({ address: dep.identity, abi: identityAbi, functionName: "registerFirstPasskey", args: [toHex(pubkey.slice(1, 33)), toHex(pubkey.slice(33))], ...fees }), "register_passkey");
   }
 
-  // The borrower opens a line at the market's maximum credit (3x deposit, health about 133%) and takes a
-  // small BTC long on Perpl's real book.
+  // The borrower opens a line sized so its health sits 0.6% above the market's current opening bar (an
+  // earlier run may have left the bars tightened), and takes a small BTC long on Perpl's real book.
+  const risk = await pub.readContract({ address: dep.manager, abi: managerAbi, functionName: "riskParams" });
+  const principal = (deposit * 10_000n) / BigInt(risk.openHealthBps + 60 - 10_000);
   // Resume with an already-open line if a previous attempt got that far.
   let line = (await pub.readContract({ address: dep.manager, abi: managerAbi, functionName: "activeLine", args: [borrower.address] })) as Address;
   if (line === "0x0000000000000000000000000000000000000000") {
     const expiry = Math.floor(Date.now() / 1000) + 86_400;
-    await wait(await asDeployer.writeContract({ address: dep.manager, abi: managerAbi, functionName: "approve", args: [borrower.address, deposit * 3n, 1_000, expiry] }), "underwriter_approve");
+    await wait(await asDeployer.writeContract({ address: dep.manager, abi: managerAbi, functionName: "approve", args: [borrower.address, principal, 1_000, expiry] }), "underwriter_approve");
     await wait(await asBorrower.writeContract({ address: dep.ausd, abi: erc20Abi, functionName: "approve", args: [dep.manager, deposit], ...fees }), "approve_deposit");
-    await wait(await asBorrower.writeContract({ address: dep.manager, abi: managerAbi, functionName: "openLine", args: [deposit, deposit * 3n], ...fees }), "open_line");
+    await wait(await asBorrower.writeContract({ address: dep.manager, abi: managerAbi, functionName: "openLine", args: [deposit, principal], ...fees }), "open_line");
     line = (await pub.readContract({ address: dep.manager, abi: managerAbi, functionName: "activeLine", args: [borrower.address] })) as Address;
   } else {
     step("resumed_line", { line });
@@ -184,9 +190,11 @@ async function main() {
   proc.stderr.on("data", (b: Buffer) => console.error("  keeper err:", b.toString()));
   while (!keeperLog.some((e) => e.event === "line_discovered" && e.line === line)) await new Promise((r) => setTimeout(r, 300));
 
-  // Make the line unhealthy in block B by tightening the freeze bar above its health (about 1.33).
+  // Make the line unhealthy in block B by tightening the freeze bar just above its health.
+  const freeze = risk.openHealthBps + 100;
+  const bar = Math.max(risk.sweepHealthBps, risk.openHealthBps + 200);
   const rB = await wait(
-    await asDeployer.writeContract({ address: dep.curator, abi: curatorAbi, functionName: "tightenRisk", args: [{ freezeHealthBps: 13_500, openHealthBps: 13_600, sweepHealthBps: 13_600 }, 30_000] }),
+    await asDeployer.writeContract({ address: dep.curator, abi: curatorAbi, functionName: "tightenRisk", args: [{ freezeHealthBps: freeze, openHealthBps: risk.openHealthBps + 200, sweepHealthBps: bar }, 30_000] }),
     "make_unhealthy",
   );
   const timeout = new Promise<void>((_, rej) => setTimeout(() => rej(new Error("keeper did not settle within 120 s")), 120_000));
@@ -210,9 +218,13 @@ async function main() {
 
   // Restoring is a loosening, so it goes through the curator's timelock: submit now, execute after it.
   const restore = encodeFunctionData({ abi: managerAbi, functionName: "setRiskParams", args: [{ freezeHealthBps: 11_000, openHealthBps: 13_000, sweepHealthBps: 12_500 }, 30_000] });
-  const rR = await wait(await asDeployer.writeContract({ address: dep.curator, abi: curatorAbi, functionName: "submit", args: [dep.manager, restore] }), "submit_restore_risk_params");
-  const lock = await pub.readContract({ address: dep.curator, abi: curatorAbi, functionName: "timelock" });
-  const at = (await pub.getBlock({ blockNumber: rR.blockNumber })).timestamp + lock;
+  const id = keccak256(encodeAbiParameters([{ type: "address" }, { type: "bytes" }], [dep.manager, restore]));
+  let at = await pub.readContract({ address: dep.curator, abi: curatorAbi, functionName: "pending", args: [id] });
+  if (at === 0n) {
+    // Not queued by an earlier run yet.
+    const rR = await wait(await asDeployer.writeContract({ address: dep.curator, abi: curatorAbi, functionName: "submit", args: [dep.manager, restore] }), "submit_restore_risk_params");
+    at = (await pub.getBlock({ blockNumber: rR.blockNumber })).timestamp + (await pub.readContract({ address: dep.curator, abi: curatorAbi, functionName: "timelock" }));
+  }
   step("restore_pending", { target: dep.manager, data: restore, executableAfter: new Date(Number(at) * 1000).toISOString(),
     execute: `cast send ${dep.curator} "execute(address,bytes)" ${dep.manager} ${restore}` });
   evidence.keeperLog = keeperLog;
