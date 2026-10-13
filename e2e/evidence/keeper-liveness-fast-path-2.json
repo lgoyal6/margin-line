@@ -1,0 +1,160 @@
+{
+  "actors": {
+    "keeper": "0x09d78b4af44a33C2F68182193c5d7c817ed0c7D8",
+    "borrower": "0xfECD663C1586164CEE7621d13CDF4Eb262720fd1",
+    "reuse": true
+  },
+  "top_up_keeper": {
+    "hash": "0xb5d3c6c04b7a56d644c69675f2e729c28191e9854f8c2979616570ea9ddc995c",
+    "block": "70313766",
+    "status": "success",
+    "gasUsed": "21165"
+  },
+  "top_up_borrower": {
+    "hash": "0x6703a5b949a574ac84bddb67d6262d902cb343a2f1297ef09e5eb0ed386c0594",
+    "block": "70313769",
+    "status": "success",
+    "gasUsed": "21165"
+  },
+  "underwriter_approve": {
+    "hash": "0xedb30083a1505f556c922167b7b584784a84971b6302d01e51c9b45f7dc99f00",
+    "block": "70313776",
+    "status": "success",
+    "gasUsed": "61810"
+  },
+  "approve_deposit": {
+    "hash": "0xc2c42cd9e6c528f8087766175b0de87bde709a96ef052ee39968936b037c5416",
+    "block": "70313779",
+    "status": "success",
+    "gasUsed": "71111"
+  },
+  "open_line": {
+    "hash": "0xe26cf3b14192ac39b73d296f70c552b458bdbfcf68c4f31dda5a79e557adc22c",
+    "block": "70313781",
+    "status": "success",
+    "gasUsed": "1317707"
+  },
+  "open_btc_long": {
+    "hash": "0x5e9d2b23fae805768864e1250c2abbd615e14b03d0bccb710f62f03f5c5002bb",
+    "block": "70313785",
+    "status": "success",
+    "gasUsed": "900000"
+  },
+  "line": {
+    "line": "0x9A5e91e7AF0694F2A2EF9911C5D746138cAa03D1",
+    "healthBps": "13858"
+  },
+  "make_unhealthy": {
+    "hash": "0x9b623531c9be6d7b4a73b601627961233960ac1946eecf5b12fde01041be6f62",
+    "block": "70313795",
+    "status": "success",
+    "gasUsed": "62244"
+  },
+  "liveness": {
+    "unhealthyInBlock": "70313795",
+    "frozenInBlock": "70313796",
+    "blocksAfterUnhealthy": "1",
+    "freezeTx": "0xc652c815d8ec675f99776e8bb2184e3ed933c41ac50b1900e7a7adae200633a9"
+  },
+  "outcome": {
+    "state": 3,
+    "enforcer": "0x09d78b4af44a33C2F68182193c5d7c817ed0c7D8",
+    "keeperBountyAUSD": "4695311",
+    "poolPrincipalOfLine": "0",
+    "poolTotalLosses": "0"
+  },
+  "restore_pending": {
+    "target": "0x8B300a2336e359b8490A46BE5742Ee49996BD95f",
+    "data": "0x256916610000000000000000000000000000000000000000000000000000000000002af800000000000000000000000000000000000000000000000000000000000032c800000000000000000000000000000000000000000000000000000000000030d40000000000000000000000000000000000000000000000000000000000007530",
+    "executableAfter": "2026-10-13T00:07:13.000Z",
+    "execute": "cast send 0x7E3808E8124C3E42546F3e2f16f7f8c944208A47 \"execute(address,bytes)\" 0x8B300a2336e359b8490A46BE5742Ee49996BD95f 0x256916610000000000000000000000000000000000000000000000000000000000002af800000000000000000000000000000000000000000000000000000000000032c800000000000000000000000000000000000000000000000000000000000030d40000000000000000000000000000000000000000000000000000000000007530"
+  },
+  "keeperLog": [
+    {
+      "t": "2026-10-12T05:27:05.244Z",
+      "event": "start",
+      "keeper": "0x09d78b4af44a33C2F68182193c5d7c817ed0c7D8",
+      "rpc": "https://testnet-rpc.monad.xyz",
+      "manager": "0x8B300a2336e359b8490A46BE5742Ee49996BD95f",
+      "balanceMON": "0.538211992"
+    },
+    {
+      "t": "2026-10-12T05:27:05.246Z",
+      "event": "warn_reserve",
+      "balanceMON": "0.538211992",
+      "note": "Monad keeps a 10 MON reserve per EOA"
+    },
+    {
+      "t": "2026-10-12T05:27:05.769Z",
+      "event": "subscribed",
+      "ws": "wss://testnet-rpc.monad.xyz"
+    },
+    {
+      "t": "2026-10-12T05:27:05.871Z",
+      "event": "subscribed_logs",
+      "fast": true
+    },
+    {
+      "t": "2026-10-12T05:27:06.537Z",
+      "event": "line_discovered",
+      "line": "0x9A5e91e7AF0694F2A2EF9911C5D746138cAa03D1",
+      "block": "70313781"
+    },
+    {
+      "t": "2026-10-12T05:27:07.287Z",
+      "event": "fast_freeze_sent",
+      "line": "0x9A5e91e7AF0694F2A2EF9911C5D746138cAa03D1",
+      "estimatedHealth": "13859",
+      "threshold": "13900",
+      "seenAtBlock": "70313795"
+    },
+    {
+      "t": "2026-10-12T05:27:07.689Z",
+      "event": "tx",
+      "action": "freeze",
+      "path": "fast",
+      "line": "0x9A5e91e7AF0694F2A2EF9911C5D746138cAa03D1",
+      "hash": "0xc652c815d8ec675f99776e8bb2184e3ed933c41ac50b1900e7a7adae200633a9",
+      "block": "70313796",
+      "status": "success",
+      "gasUsed": "380000",
+      "gasLimit": "380000"
+    },
+    {
+      "t": "2026-10-12T05:27:07.689Z",
+      "event": "frozen",
+      "line": "0x9A5e91e7AF0694F2A2EF9911C5D746138cAa03D1",
+      "path": "fast",
+      "seenAtBlock": "70313795",
+      "frozenInBlock": "70313796",
+      "blocksAfterSeen": "1"
+    },
+    {
+      "t": "2026-10-12T05:27:08.637Z",
+      "event": "tx",
+      "action": "unwind",
+      "line": "0x9A5e91e7AF0694F2A2EF9911C5D746138cAa03D1",
+      "hash": "0x456f2bb8d3d584705a1d6d14e05c53cbc7a996e6bc667474d27f62ee7c99b7ab",
+      "block": "70313800",
+      "status": "success",
+      "gasUsed": "443649",
+      "gasLimit": "443649"
+    },
+    {
+      "t": "2026-10-12T05:27:09.263Z",
+      "event": "tx",
+      "action": "settleFrozen",
+      "line": "0x9A5e91e7AF0694F2A2EF9911C5D746138cAa03D1",
+      "hash": "0x93b52388f6362eae33420467fb212df3b77d4d1f0211af01af72e36e4ef71ab9",
+      "block": "70313802",
+      "status": "success",
+      "gasUsed": "583518",
+      "gasLimit": "583518"
+    },
+    {
+      "t": "2026-10-12T05:27:09.263Z",
+      "event": "settled",
+      "line": "0x9A5e91e7AF0694F2A2EF9911C5D746138cAa03D1"
+    }
+  ]
+}
