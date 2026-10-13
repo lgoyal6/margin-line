@@ -558,8 +558,19 @@ gas, and the deployer needs a faucet top-up first.
 `deployments/monad-testnet.json`: the full system through `MarketFactory`, deployed from block
 69,981,100 by `script/Deploy.s.sol` (rpId `localhost` for the end-to-end tests). One BTC market,
 seeded with $7,000 senior and $3,000 junior. Score epoch 2 (all 5,257 scored Perpl mainnet
-accounts, 108 approved, root `0x7de0c84c...5881d196`) is posted with a 0.1 MON bond and finalizes after
-its one-day challenge window. Epoch 1 was built before the full-history fixes; it was retired live
+accounts, 108 approved, root `0x7de0c84c...5881d196`) was posted with a 0.1 MON bond, went unchallenged
+through its one-day window, and was finalized on Oct 11, 2026 (tx `0x67b85d70f0a8c5c9b54b8a22f20c5726ff0db89eb98f4e400ce5057ce5166b77`, block
+70,306,994; `latestFinalizedEpoch` = 2); the publisher then claimed the bond back (tx
+`0x3b2296152ea2635945d744d6fbec416e7d4aa8c62f1b05f5710703339f7e9136`). `scorer/verify_onchain.py` against testnet: root matches, finalized, seven
+real leaves verify, a tampered limit fails.
+
+**Scores cannot open lines on testnet.** Every leaf scores a Perpl account on Monad **mainnet**, where
+the trading history is. `openLineWithScore` requires that account to be linked to the borrower in
+`HistoryLinkRegistry`, and the registry checks ownership against the Perpl exchange on the chain it
+runs on, so a mainnet account cannot be linked on testnet. On testnet, lines therefore open through
+the underwriter path, labeled in the app as a demo approval, never as a score. The scored path itself is
+covered by unit tests (`test/unit/ScoreManager.t.sol`) and the invariant handler, which opens scored
+lines from finalized epochs with linked accounts. Epoch 1 was built before the full-history fixes; it was retired live
 through the dispute path: a bonded arbitrated challenge, the guardian ruling it invalid, and the
 challenger claiming both bonds. The earlier Phase 0 to 4 deployment is in git history.
 
