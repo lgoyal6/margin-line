@@ -15,7 +15,11 @@ const base = process.env.APP_URL ?? "http://localhost:5180"; // WebAuthn needs a
 // LIVE=1 runs against Monad testnet: the app must be started with VITE_RPC_URL set to testnet.
 const live = process.env.LIVE === "1";
 const rpc = process.env.RPC_URL ?? (live ? "https://testnet-rpc.monad.xyz" : "http://127.0.0.1:8547");
-const out = live ? "e2e/evidence/newcomer-testnet" : "e2e/evidence/newcomer";
+// VIDEO=<dir> records the run as a demo video, paced for narration, and ends with a tour of the
+// Curate and Explore pages. Its screenshots go to the same directory, not to the evidence folders.
+const video = process.env.VIDEO;
+const pause = (page: Page, ms = 2_500) => (video ? page.waitForTimeout(ms) : Promise.resolve());
+const out = video ?? (live ? "e2e/evidence/newcomer-testnet" : "e2e/evidence/newcomer");
 mkdirSync(out, { recursive: true });
 const dep = JSON.parse(readFileSync(live ? "deployments/monad-testnet.json" : "deployments/local-fork.json", "utf8"));
 const pub = createPublicClient({ transport: http(rpc) });
@@ -30,9 +34,14 @@ async function snap(page: Page, name: string) {
 async function act(page: Page, label: string, scope = page.locator("body")) {
   const t0 = Date.now();
   const errorsBefore = await page.locator(".action-error").count();
-  await scope.getByRole("button", { name: label, exact: true }).click();
+  const button = scope.getByRole("button", { name: label, exact: true });
+  if (video) {
+    await button.scrollIntoViewIfNeeded();
+    await pause(page);
+  }
+  await button.click();
   await page.waitForFunction(() => ![...document.querySelectorAll("button")].some((b) => b.textContent === "Working..."), null, { timeout: 180_000 });
-  await page.waitForTimeout(1_500); // let the page reload its data
+  await page.waitForTimeout(video ? 3_000 : 1_500); // let the page reload its data
   const errors = await page.locator(".action-error").allTextContents();
   if (errors.length > errorsBefore) throw new Error(`"${label}" failed: ${errors.join(" | ")}`);
   log.push({ step: label, ms: Date.now() - t0 });
@@ -67,7 +76,9 @@ async function waitText(page: Page, text: string | RegExp) {
 }
 
 const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1200, height: 900 } });
+const context = await browser.newContext(video
+  ? { viewport: { width: 1280, height: 800 }, recordVideo: { dir: video, size: { width: 1280, height: 800 } } }
+  : { viewport: { width: 1200, height: 900 } });
 const page = await context.newPage();
 const cdp = await context.newCDPSession(page);
 await cdp.send("WebAuthn.enable");
@@ -82,6 +93,7 @@ try {
   await page.goto(`${base}/trade`);
   await waitText(page, "Your account is a passkey");
   await snap(page, "start");
+  await pause(page, 5_000);
 
   // 1. Account: passkey only, then test funds (fork only) and onchain registration.
   await act(page, "Create account with a passkey");
@@ -153,6 +165,21 @@ try {
   const junior = page.locator(".tranche-card.junior");
   await act(page, "Deposit", junior);
   await snap(page, "lent");
+
+  if (video) {
+    // Tour: the curator's rules and stress test, then the explorer, scrolled slowly.
+    for (const route of ["curate", "explore"]) {
+      await page.goto(`${base}/${route}`);
+      await page.waitForLoadState("networkidle");
+      await pause(page, 4_000);
+      for (let y = 0; y < 6; y++) {
+        await page.mouse.wheel(0, 350);
+        await pause(page, 1_800);
+      }
+    }
+    await page.goto(`${base}/trade`);
+    await pause(page, 3_000);
+  }
 
   // Onchain checks.
   const lineAbi = parseAbi(["function state() view returns (uint8)", "function principal() view returns (uint256)"]);
