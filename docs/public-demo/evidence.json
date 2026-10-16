@@ -1,0 +1,20 @@
+{
+  "source_commit": "880735cc3a556abb86843af5e5c4f43f02b7ea0c",
+  "reports": [
+    {
+      "file": "seven.json",
+      "path": "docs/evidence/backtest-h7.json",
+      "sha256": "7482948a90fcd505d4296fec012327afc7d92647009eb40b2b21e2ad03ac8249"
+    },
+    {
+      "file": "fourteen.json",
+      "path": "docs/evidence/backtest-h14.json",
+      "sha256": "a567c2161514c1cca5079c76c16f6e9ec091b6214daa1baf9594f00fdf9dae6a"
+    },
+    {
+      "file": "stress.json",
+      "path": "e2e/evidence/worst-day/result.json",
+      "sha256": "773e0305cfcd6748809854797265cd8fdbe86fee87d334fcb1d07db26eda4685"
+    }
+  ]
+}
