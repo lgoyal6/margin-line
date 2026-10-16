@@ -116,7 +116,7 @@ contract TradeGuard is Ownable2Step {
     ///         that closes the position.
     function closePrice(IExchange exchange, uint256 perpId, bool isLong) external view returns (uint256) {
         (uint256 mark, uint16 bandBps) = _markAndBand(exchange, perpId);
-        return isLong ? (mark * (10_000 - bandBps)) / 10_000 : (mark * (10_000 + bandBps)) / 10_000;
+        return isLong ? (mark * (10_000 - bandBps) + 9_999) / 10_000 : (mark * (10_000 + bandBps)) / 10_000;
     }
 
     /// @notice AUSD value (collateral units) of an order at its limit price, using Perpl's own
