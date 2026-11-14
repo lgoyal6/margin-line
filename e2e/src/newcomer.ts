@@ -19,6 +19,12 @@ const rpc = process.env.RPC_URL ?? (live ? "https://testnet-rpc.monad.xyz" : "ht
 // Curate and Explore pages. Its screenshots go to the same directory, not to the evidence folders.
 const video = process.env.VIDEO;
 const pause = (page: Page, ms = 2_500) => (video ? page.waitForTimeout(ms) : Promise.resolve());
+/** Video only: bring `text` into view and hold on it, so the result of the last step is on screen. */
+async function show(page: Page, text: string | RegExp, ms = 3_500) {
+  if (!video) return;
+  await page.getByText(text).first().scrollIntoViewIfNeeded();
+  await page.waitForTimeout(ms);
+}
 const out = video ?? (live ? "e2e/evidence/newcomer-testnet" : "e2e/evidence/newcomer");
 mkdirSync(out, { recursive: true });
 const dep = JSON.parse(readFileSync(live ? "deployments/monad-testnet.json" : "deployments/local-fork.json", "utf8"));
@@ -119,6 +125,7 @@ try {
   await act(page, "Check");
   await waitText(page, "Verified onchain");
   await snap(page, "score");
+  await show(page, /Approved for up to/, 6_000);
 
   // 3. Credit: labeled demo approval (fork only), then open a line with the default 500 + 1,000.
   if (live) {
@@ -143,14 +150,17 @@ try {
   // 4. Trade: open a $500 long at 2x, then close it.
   await act(page, "Open long");
   await waitText(page, /^Long \$/);
+  await show(page, /Active line/, 5_000);
   await snap(page, "long-open");
   await act(page, "Close position");
   await page.getByText("No position").first().waitFor({ timeout: 120_000 });
+  await show(page, /Active line/);
 
   // 5. Sweep: take out the maximum the line allows, approved by the passkey.
   const ausdBefore = await pub.readContract({ address: dep.ausd, abi: parseAbi(["function balanceOf(address) view returns (uint256)"]), functionName: "balanceOf", args: [user] });
   await act(page, "Withdraw profit with passkey");
   await snap(page, "swept");
+  await show(page, /Active line/);
   const ausdAfterSweep = await pub.readContract({ address: dep.ausd, abi: parseAbi(["function balanceOf(address) view returns (uint256)"]), functionName: "balanceOf", args: [user] });
 
   // 6. Close the line, approved by the passkey: lenders are repaid, the rest returns to the trader.
@@ -167,11 +177,11 @@ try {
   await snap(page, "lent");
 
   if (video) {
-    // Tour: the curator's rules and stress test, then the explorer, scrolled slowly.
-    for (const route of ["curate", "explore"]) {
+    // Tour: the curator's rules and stress test, scrolled slowly. (The app polls the chain, so the
+    // page never goes network-idle; a fixed wait lets it load.)
+    for (const route of ["curate"]) {
       await page.goto(`${base}/${route}`);
-      await page.waitForLoadState("networkidle");
-      await pause(page, 4_000);
+      await pause(page, 6_000);
       for (let y = 0; y < 6; y++) {
         await page.mouse.wheel(0, 350);
         await pause(page, 1_800);
