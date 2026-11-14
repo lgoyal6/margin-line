@@ -344,9 +344,11 @@ positions opened before June had no leverage or deposit and passed the leverage 
 events are now read too. With both bugs present, February to May showed no edge at all (12.7% of
 approvals liquidated against 11.6%); the fix removed 252 early approvals that were high-leverage traders.
 
-**Limits.** Traders recur across weekly checkpoints, so the p-values overstate independence; the
-effect is large and consistent across weeks, so the conclusion stands. Funding-source clustering
-(shared first AUSD inflow) is not implemented.
+**Limits.** Traders recur across weekly checkpoints, so pooled p-values do not account for their
+dependence. The chronological, trader-clustered and capital-matched checks in
+[TEMPORAL_VALIDATION.md](TEMPORAL_VALIDATION.md) strengthen the observed association, but they do not
+establish a prospective or causal lending benefit. The archived applicant cohort also conditions on
+future trading activity. Funding-source clustering (shared first AUSD inflow) is not implemented.
 
 **Reproduce.** `data/refresh.sh` downloads any newly published ranges, decodes them (streaming to
 disk, so full history fits in memory), and reruns both horizons. Reports:
